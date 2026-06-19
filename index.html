@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Katalog Jastip ZS & Shi - Enterprise System</title>
     
+    <!-- SheetJS untuk Fitur Upload Excel Katalog -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
+    <!-- ExcelJS & FileSaver untuk Fitur Download Rekapan Superadmin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
+    <!-- FIREBASE SDK V8 COMPAT -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -36,10 +39,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        #masterPasteArea, .qris-paste-area { border: 2px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; position: relative; overflow: hidden; outline: none; transition: all 0.2s; }
-        #masterPasteArea { min-height: 140px; }
-        .qris-paste-area { min-height: 120px; }
-        #masterPasteArea.active, #masterPasteArea:focus, .qris-paste-area:focus { border-color: #6366f1; background: #f5f7ff; }
+        #masterPasteArea { border: 2px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; position: relative; overflow: hidden; outline: none; transition: all 0.2s; min-height: 140px; }
+        #masterPasteArea.active, #masterPasteArea:focus { border-color: #6366f1; background: #f5f7ff; }
         
         .tab-btn { padding: 8px 16px; font-weight: 700; font-size: 0.875rem; color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; flex-shrink: 0; }
         .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
@@ -58,11 +59,13 @@
 </head>
 <body class="bg-[#fcfdfe] text-slate-800">
 
+    <!-- Loading Database Overlay -->
     <div id="loading-overlay">
         <div class="loader"></div>
         <p class="text-sm font-bold text-slate-500 mt-4 text-center">Menghubungkan ke Database Cloud...</p>
     </div>
 
+    <!-- NAVIGATION -->
     <nav class="bg-indigo-950 text-white p-3 md:p-4 sticky top-0 z-50 shadow-md">
         <div class="container mx-auto flex justify-between items-center max-w-7xl">
             <div class="flex items-center gap-2 md:gap-3">
@@ -81,6 +84,7 @@
 
     <div class="container mx-auto p-3 md:p-4 max-w-7xl mb-10">
 
+        <!-- AUTHENTICATION VIEW -->
         <div id="auth-view" class="max-w-md mx-auto my-8 md:my-12 animate-fade-up px-2 md:px-0 hidden">
             <div class="card p-6 md:p-8 border-t-4 border-indigo-600">
                 <h2 id="auth-title" class="text-lg md:text-xl font-black text-center mb-6">LOGIN JASTIPER</h2>
@@ -97,8 +101,10 @@
             </div>
         </div>
 
+        <!-- MAIN DASHBOARD -->
         <div id="app-view" class="hidden animate-fade-up">
             
+            <!-- SUPER ADMIN VIEW -->
             <div id="admin-view" class="hidden">
                 <div class="flex gap-2 md:gap-4 border-b border-slate-200 mb-4 md:mb-6 overflow-x-auto hide-scrollbar pb-1">
                     <button onclick="switchAdminTab('inventory')" id="tab-inventory" class="tab-btn active">📦 Kelola Stock</button>
@@ -106,6 +112,7 @@
                     <button onclick="switchAdminTab('users')" id="tab-users" class="tab-btn">👥 Akun Jastiper</button>
                 </div>
 
+                <!-- Tab 1: Inventory & Photos -->
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="card p-4 md:p-5 border-t-4 border-emerald-500 flex flex-col justify-between">
@@ -129,6 +136,12 @@
                             <h3 class="font-extrabold text-sm uppercase mb-3 flex items-center gap-2">🖼️ Master Photo Manager</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
+                                    <!-- TAMBAHAN: Dropdown Filter Brand untuk Master Photo -->
+                                    <select id="masterBrandFilter" onchange="updateMasterProductDropdown()" class="input-field mb-2 font-bold text-xs bg-slate-50">
+                                        <option value="ALL">Semua Brand</option>
+                                        <option value="ZS">Brand: ZS Saja</option>
+                                        <option value="SHI">Brand: SHI Saja</option>
+                                    </select>
                                     <select id="masterProductSelect" class="input-field mb-3 font-bold text-xs text-indigo-700 bg-indigo-50/50">
                                         <option value="">-- Pilih Baju (Belum Ada Foto) --</option>
                                     </select>
@@ -144,6 +157,7 @@
                         </div>
                     </div>
 
+                    <!-- Inventory Table -->
                     <div class="card p-4 md:p-5">
                         <div class="flex flex-col md:flex-row justify-between gap-3 mb-4">
                             <div class="flex items-center gap-2">
@@ -181,36 +195,32 @@
                     </div>
                 </div>
 
+                <!-- Tab 2: Orders Dashboard & Rekening Setup (Admin) -->
                 <div id="admin-tab-orders" class="hidden card p-4 md:p-5 space-y-4">
                     
-                    <h3 class="font-black text-sm uppercase">⚙️ Pengaturan QRIS Pembayaran</h3>
+                    <!-- PENGATURAN REKENING PEMBAYARAN -->
+                    <h3 class="font-black text-sm uppercase">⚙️ Pengaturan Rekening Pembayaran</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                        <div class="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex flex-col justify-between">
+                        <!-- ZS Bank Info -->
+                        <div class="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex flex-col justify-between space-y-3">
                             <div>
-                                <h4 class="font-bold text-xs uppercase mb-2 text-indigo-900">Upload QRIS - ZS</h4>
-                                <div id="qrisPasteAreaZS" tabindex="0" class="qris-paste-area border-indigo-300 bg-white mb-3 hover:bg-indigo-50">
-                                    <span id="qrisTextZS" class="text-[9px] text-slate-400 font-bold uppercase text-center px-2 pointer-events-none">Klik & CTRL+V Untuk Paste QRIS ZS</span>
-                                    <img id="previewQrisZS" class="absolute inset-0 w-full h-full object-contain p-2 hidden bg-white z-10">
-                                </div>
+                                <h4 class="font-bold text-xs uppercase mb-3 text-indigo-900">Rekening - Brand ZS</h4>
+                                <input type="text" id="bank_name_ZS" placeholder="Nama Bank (cth: BCA)" class="input-field text-xs mb-2 bg-white">
+                                <input type="text" id="acc_number_ZS" placeholder="Nomor Rekening" class="input-field text-xs mb-2 bg-white font-mono">
+                                <input type="text" id="acc_name_ZS" placeholder="Atas Nama" class="input-field text-xs bg-white">
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="saveQris('ZS')" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Simpan ZS</button>
-                                <button onclick="deleteQris('ZS')" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Hapus ZS</button>
-                            </div>
+                            <button onclick="saveBankInfo('ZS')" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white text-[10px] py-2.5 rounded font-bold uppercase shadow-sm transition">Simpan Rekening ZS</button>
                         </div>
                         
-                        <div class="bg-rose-50/50 p-4 rounded-lg border border-rose-100 flex flex-col justify-between">
+                        <!-- SHI Bank Info -->
+                        <div class="bg-rose-50/50 p-4 rounded-lg border border-rose-100 flex flex-col justify-between space-y-3">
                             <div>
-                                <h4 class="font-bold text-xs uppercase mb-2 text-rose-900">Upload QRIS - SHI</h4>
-                                <div id="qrisPasteAreaSHI" tabindex="0" class="qris-paste-area border-rose-300 bg-white mb-3 hover:bg-rose-50 focus:border-rose-600 focus:bg-rose-50">
-                                    <span id="qrisTextSHI" class="text-[9px] text-slate-400 font-bold uppercase text-center px-2 pointer-events-none">Klik & CTRL+V Untuk Paste QRIS SHI</span>
-                                    <img id="previewQrisSHI" class="absolute inset-0 w-full h-full object-contain p-2 hidden bg-white z-10">
-                                </div>
+                                <h4 class="font-bold text-xs uppercase mb-3 text-rose-900">Rekening - Brand SHI</h4>
+                                <input type="text" id="bank_name_SHI" placeholder="Nama Bank (cth: Mandiri)" class="input-field text-xs mb-2 bg-white">
+                                <input type="text" id="acc_number_SHI" placeholder="Nomor Rekening" class="input-field text-xs mb-2 bg-white font-mono">
+                                <input type="text" id="acc_name_SHI" placeholder="Atas Nama" class="input-field text-xs bg-white">
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="saveQris('SHI')" class="w-full bg-rose-700 hover:bg-rose-800 text-white text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Simpan SHI</button>
-                                <button onclick="deleteQris('SHI')" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Hapus SHI</button>
-                            </div>
+                            <button onclick="saveBankInfo('SHI')" class="w-full bg-rose-700 hover:bg-rose-800 text-white text-[10px] py-2.5 rounded font-bold uppercase shadow-sm transition">Simpan Rekening SHI</button>
                         </div>
                     </div>
 
@@ -237,6 +247,7 @@
                     </div>
                 </div>
 
+                <!-- Tab 3: Users -->
                 <div id="admin-tab-users" class="hidden card p-4 md:p-5 space-y-4">
                     <h3 class="font-black text-sm uppercase">👥 Daftar Akun Jastiper</h3>
                     <div class="table-container border border-slate-200">
@@ -257,16 +268,19 @@
                 </div>
             </div>
 
+            <!-- JASTIPER VIEW -->
             <div id="jastip-view" class="hidden">
                 <div class="flex gap-2 md:gap-4 border-b border-slate-200 mb-4 overflow-x-auto hide-scrollbar pb-1">
                     <button onclick="switchJastipTab('catalog')" id="jastip-tab-catalog" class="tab-btn active">🛍️ Katalog Baju</button>
                     <button onclick="switchJastipTab('myorders')" id="jastip-tab-myorders" class="tab-btn">📦 Keranjang Checkout <span id="cart-badge" class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden ml-1">0</span></button>
                 </div>
 
+                <!-- Jastiper Sub-Tab 1: Catalog -->
                 <div id="jastip-panel-catalog" class="space-y-4">
                     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-3">
                         <h2 class="text-base md:text-lg font-black uppercase text-slate-800">Live Stock Catalog</h2>
                         
+                        <!-- Grid Input Responsif HP -->
                         <div class="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 md:gap-3 w-full">
                             <select id="jastipBrandFilter" onchange="renderJastipGrid()" class="input-field py-1.5 text-[10px] md:text-xs font-bold w-full md:w-36 bg-slate-50">
                                 <option value="ALL">Semua Brand</option>
@@ -283,9 +297,11 @@
                         </div>
                     </div>
                     
+                    <!-- Grid Responsive Catalog -->
                     <div id="jastipGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"></div>
                 </div>
 
+                <!-- Jastiper Sub-Tab 2: My Orders & Bank Gateway -->
                 <div id="jastip-panel-myorders" class="hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="card p-4 md:p-5 lg:col-span-2 space-y-4">
@@ -324,14 +340,16 @@
                                     <span id="sumNetPrice">Rp 0</span>
                                 </div>
                                 
+                                <!-- Container Split Tagihan Per Brand -->
                                 <div id="splitTotalContainer" class="space-y-1 pt-2 border-t border-slate-200 mt-2"></div>
 
                                 <div class="pt-3" id="actionCheckoutRow">
-                                    <button onclick="processSelesaiCheckout()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3 rounded-lg text-xs uppercase tracking-wider transition shadow">Checkout & Bayar Sekarang</button>
+                                    <button onclick="processSelesaiCheckout()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3 rounded-lg text-xs uppercase tracking-wider transition shadow">Checkout & Lanjut Bayar</button>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Panel Rekening Pembayaran -->
                         <div id="qrisGatewayPanel" class="card p-4 md:p-5 border-t-4 border-amber-500 space-y-4 hidden">
                             <div class="text-center bg-amber-50 p-3 rounded-lg border border-amber-200">
                                 <h4 class="text-xs font-black text-amber-800 uppercase tracking-wide">⚠️ Batas Waktu Bayar</h4>
@@ -339,11 +357,14 @@
                                 <p class="text-[9px] md:text-[10px] text-slate-500 font-medium mt-0.5">Sistem membatalkan otomatis jika waktu habis!</p>
                             </div>
 
-                            <div id="dynamicQrisContainer" class="flex flex-col gap-4 justify-center items-center w-full">
-                                </div>
+                            <!-- Dynamic Bank Details Container -->
+                            <div id="dynamicPaymentContainer" class="flex flex-col gap-4 justify-center items-center w-full">
+                                <!-- Info Rekening akan di-inject disini melalui Javascript -->
+                            </div>
 
                             <div class="space-y-2 mt-2 pt-4 border-t border-slate-100">
                                 <label class="block text-[10px] md:text-[11px] font-bold text-slate-600 uppercase">Lampirkan Bukti (Bebas Format):</label>
+                                <!-- INPUT FILE TANPA BATASAN -->
                                 <input type="file" id="receiptFileInput" class="block w-full text-[10px] md:text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:font-bold file:bg-amber-100 file:text-amber-800">
                             </div>
                             <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-lg text-xs uppercase transition shadow">Kirim Bukti Valid</button>
@@ -354,11 +375,14 @@
         </div>
     </div>
 
+    <!-- JASTIPER ORDER MODAL (RESPONSIF HP) -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
         <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]">
+            <!-- Bagian Gambar Dibuat Lebih Pendek di HP -->
             <div class="w-full md:w-1/2 bg-slate-50 p-4 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
                 <img id="modal-img" class="w-full h-40 md:h-auto md:max-h-80 object-contain drop-shadow-md" src="" alt="Foto Baju">
             </div>
+            <!-- Bagian Konten Scrollable di HP -->
             <div class="w-full md:w-1/2 p-4 md:p-6 flex flex-col flex-grow overflow-y-auto">
                 <div class="flex justify-between items-start mb-3">
                     <div>
@@ -399,6 +423,7 @@
         </div>
     </div>
 
+    <!-- ORDER DETAIL MODAL FOR ADMIN -->
     <div id="order-detail-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-xl max-w-4xl w-full p-4 md:p-6 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-start border-b pb-3 mb-3">
@@ -434,12 +459,14 @@
         </div>
     </div>
 
+    <!-- ADMIN PROOF IMAGE VIEW MODAL -->
     <div id="proof-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-xl max-w-xl w-full p-4 space-y-3">
             <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-black text-xs md:text-sm uppercase tracking-wider text-indigo-950">Bukti Bayar Sesi Transaksi</h3>
                 <button onclick="closeProofModal()" class="text-slate-400 text-xl font-bold hover:text-rose-600 leading-none">&times;</button>
             </div>
+            <!-- Body dinamis -->
             <div id="proof-modal-body" class="bg-slate-50 p-2 rounded-lg flex items-center justify-center max-h-[70vh] overflow-y-auto w-full"></div>
         </div>
     </div>
@@ -472,14 +499,17 @@
 
         const superAdmins = { 'admin1': 'admin123', 'admin2': 'admin123' };
 
+        // DEKLARASI GLOBAL DATABASE
         let userAccounts = [];
         let inventoryData = [];
         let photoDatabase = {};
         let ordersData = [];
-        let qrisDatabase = { 'ZS': '', 'SHI': '' };
+        let bankDatabase = { 
+            'ZS': { bankName: '', accNumber: '', accName: '' }, 
+            'SHI': { bankName: '', accNumber: '', accName: '' } 
+        };
 
         let tempMasterBase64 = null;
-        let tempQrisBase64 = { 'ZS': null, 'SHI': null };
 
         // REAL-TIME DATABASE LISTENER
         db.ref('/').on('value', (snapshot) => {
@@ -488,15 +518,26 @@
             inventoryData = data.jastip_inventory || [];
             photoDatabase = data.jastip_photos || {};
             ordersData = data.jastip_orders || [];
-            qrisDatabase = data.jastip_qris || { 'ZS': '', 'SHI': '' };
+            bankDatabase = data.jastip_bank || { 
+                'ZS': { bankName: '', accNumber: '', accName: '' }, 
+                'SHI': { bankName: '', accNumber: '', accName: '' } 
+            };
 
             if(!isDbLoaded) {
                 isDbLoaded = true;
                 document.getElementById('loading-overlay').style.display = 'none';
-                init(); // Jalankan UI pertama kali
+                init(); 
             } else {
-                renderAllViews(); // Update UI langsung jika ada yang checkout dari perangkat lain
+                renderAllViews(); 
             }
+        }, (error) => {
+            document.getElementById('loading-overlay').innerHTML = `
+                <div class="text-rose-600 text-5xl mb-3">⚠️</div>
+                <p class="text-base font-black text-slate-800 uppercase">Koneksi Database Ditolak!</p>
+                <p class="text-xs text-slate-500 mt-2 text-center max-w-sm font-semibold">${error.message}</p>
+                <button onclick="window.location.reload()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md">Coba Muat Ulang</button>
+            `;
+            console.error("FIREBASE ERROR:", error);
         });
 
         // Helper Fungsi untuk Save ke Firebase
@@ -504,7 +545,7 @@
         function saveInventory() { db.ref('jastip_inventory').set(inventoryData); }
         function savePhotos() { db.ref('jastip_photos').set(photoDatabase); }
         function saveOrders() { db.ref('jastip_orders').set(ordersData); }
-        function saveQrisDB() { db.ref('jastip_qris').set(qrisDatabase); }
+        function saveBankDB() { db.ref('jastip_bank').set(bankDatabase); }
 
         // Interval Pengecekan Timer Auto Cancel
         setInterval(() => {
@@ -536,7 +577,7 @@
                 renderAdminOrders();
                 renderAdminUsers();
                 updateMasterProductDropdown();
-                renderAdminQris();
+                renderAdminBankInfo();
             } else {
                 renderJastipGrid();
                 renderJastipCartAndPayment();
@@ -693,11 +734,20 @@
 
                     if (newData.length === 0) return showToast("Format tidak cocok!", true);
 
-                    inventoryData = inventoryData.filter(item => item.brand !== targetBrand);
-                    inventoryData = [...inventoryData, ...newData];
+                    // --- LOGIKA BARU: UPDATE JIKA SKU SAMA, TAMBAH JIKA SKU BARU ---
+                    newData.forEach(newItem => {
+                        const existingIndex = inventoryData.findIndex(oldItem => oldItem.sku === newItem.sku);
+                        
+                        if(existingIndex >= 0) {
+                            newItem.id = inventoryData[existingIndex].id;
+                            inventoryData[existingIndex] = newItem;
+                        } else {
+                            inventoryData.push(newItem);
+                        }
+                    });
 
                     saveInventory(); 
-                    showToast(`Sinkronisasi ${targetBrand} sukses!`);
+                    showToast(`Sinkronisasi ${targetBrand} sukses ditambahkan/diperbarui!`);
                 } catch (err) {
                     showToast("Gagal memproses file.", true);
                 }
@@ -711,8 +761,6 @@
             const activeEl = document.activeElement;
             let targetType = null;
             if (activeEl.id === 'masterPasteArea') targetType = 'master';
-            else if (activeEl.id === 'qrisPasteAreaZS') targetType = 'qris-zs';
-            else if (activeEl.id === 'qrisPasteAreaSHI') targetType = 'qris-shi';
             else return;
 
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
@@ -737,18 +785,6 @@
                                 document.getElementById('pasteText').classList.add('hidden');
                                 document.getElementById('btnSaveMasterPhoto').classList.remove('hidden');
                             } 
-                            else if (targetType === 'qris-zs') {
-                                tempQrisBase64['ZS'] = base64Image;
-                                document.getElementById('previewQrisZS').src = base64Image;
-                                document.getElementById('previewQrisZS').classList.remove('hidden');
-                                document.getElementById('qrisTextZS').classList.add('hidden');
-                            } 
-                            else if (targetType === 'qris-shi') {
-                                tempQrisBase64['SHI'] = base64Image;
-                                document.getElementById('previewQrisSHI').src = base64Image;
-                                document.getElementById('previewQrisSHI').classList.remove('hidden');
-                                document.getElementById('qrisTextSHI').classList.add('hidden');
-                            }
                         };
                         img.src = event.target.result;
                     };
@@ -757,9 +793,17 @@
             }
         });
 
+        // TAMBAHAN: Update berdasarkan filter brand di dropdown Master Photo Manager
         function updateMasterProductDropdown() {
             const select = document.getElementById('masterProductSelect');
-            const uniqueProducts = [...new Set(inventoryData.map(item => item.product))];
+            const brandFilter = document.getElementById('masterBrandFilter').value;
+            
+            let filteredData = inventoryData;
+            if (brandFilter !== 'ALL') {
+                filteredData = inventoryData.filter(item => item.brand === brandFilter);
+            }
+            
+            const uniqueProducts = [...new Set(filteredData.map(item => item.product))];
             const options = ['<option value="">-- Pilih Baju (Belum Ada Foto) --</option>'];
             uniqueProducts.forEach(p => {
                 if (!photoDatabase[p]) options.push(`<option value="${p}">${p}</option>`);
@@ -861,7 +905,7 @@
             saveInventory();
         }
 
-        // --- ADMIN TABS & QRIS ---
+        // --- ADMIN TABS & PENGATURAN REKENING BANK ---
         function switchAdminTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
@@ -871,40 +915,25 @@
             if(tabName === 'users') renderAdminUsers();
         }
 
-        function saveQris(brand) {
-            if (!tempQrisBase64[brand]) return showToast("Paste gambar QRIS dulu!", true);
-            qrisDatabase[brand] = tempQrisBase64[brand];
-            saveQrisDB(); 
-            tempQrisBase64[brand] = null;
-            showToast(`QRIS ${brand} disimpan!`);
+        function saveBankInfo(brand) {
+            const bankName = document.getElementById(`bank_name_${brand}`).value.trim();
+            const accNumber = document.getElementById(`acc_number_${brand}`).value.trim();
+            const accName = document.getElementById(`acc_name_${brand}`).value.trim();
+
+            if (!bankName || !accNumber || !accName) return showToast("Harap isi semua kolom rekening!", true);
+
+            bankDatabase[brand] = { bankName, accNumber, accName };
+            saveBankDB();
+            showToast(`Informasi Rekening ${brand} berhasil disimpan!`);
         }
 
-        function deleteQris(brand) {
-            if (!confirm(`Hapus template QRIS ${brand}?`)) return;
-            qrisDatabase[brand] = '';
-            saveQrisDB(); 
-            showToast(`QRIS ${brand} dihapus!`);
-        }
-
-        function renderAdminQris() {
-            if (qrisDatabase['ZS']) {
-                document.getElementById('previewQrisZS').src = qrisDatabase['ZS'];
-                document.getElementById('previewQrisZS').classList.remove('hidden');
-                document.getElementById('qrisTextZS').classList.add('hidden');
-            } else {
-                document.getElementById('previewQrisZS').src = '';
-                document.getElementById('previewQrisZS').classList.add('hidden');
-                document.getElementById('qrisTextZS').classList.remove('hidden');
-            }
-            if (qrisDatabase['SHI']) {
-                document.getElementById('previewQrisSHI').src = qrisDatabase['SHI'];
-                document.getElementById('previewQrisSHI').classList.remove('hidden');
-                document.getElementById('qrisTextSHI').classList.add('hidden');
-            } else {
-                document.getElementById('previewQrisSHI').src = '';
-                document.getElementById('previewQrisSHI').classList.add('hidden');
-                document.getElementById('qrisTextSHI').classList.remove('hidden');
-            }
+        function renderAdminBankInfo() {
+            ['ZS', 'SHI'].forEach(brand => {
+                const data = bankDatabase[brand] || { bankName: '', accNumber: '', accName: '' };
+                document.getElementById(`bank_name_${brand}`).value = data.bankName;
+                document.getElementById(`acc_number_${brand}`).value = data.accNumber;
+                document.getElementById(`acc_name_${brand}`).value = data.accName;
+            });
         }
 
         // --- MANAJEMEN USER ---
@@ -1341,7 +1370,7 @@
             closeModal();
         }
 
-        // --- JASTIPER: KERANJANG ---
+        // --- JASTIPER: KERANJANG & TAMPILAN REKENING PEMBAYARAN ---
         function renderJastipCartAndPayment() {
             const body = document.getElementById('jastipCartItemsBody');
             const myOrders = ordersData.filter(o => o.username === currentUser);
@@ -1383,23 +1412,46 @@
                 document.getElementById('sumNetPrice').innerText = `Rp ${net.toLocaleString('id-ID')}`;
 
                 let splitHtml = '';
-                if (netZS > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-indigo-900 bg-indigo-50/70 p-2 rounded-lg border border-indigo-100"><span>Pembayaran ZS:</span><span>Rp ${netZS.toLocaleString('id-ID')}</span></div>`;
-                if (netSHI > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-rose-900 bg-rose-50/70 p-2 rounded-lg border border-rose-100"><span>Pembayaran SHI:</span><span>Rp ${netSHI.toLocaleString('id-ID')}</span></div>`;
+                if (netZS > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-indigo-900 bg-indigo-50/70 p-2 rounded-lg border border-indigo-100"><span>Tagihan ZS:</span><span>Rp ${netZS.toLocaleString('id-ID')}</span></div>`;
+                if (netSHI > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-rose-900 bg-rose-50/70 p-2 rounded-lg border border-rose-100"><span>Tagihan SHI:</span><span>Rp ${netSHI.toLocaleString('id-ID')}</span></div>`;
                 document.getElementById('splitTotalContainer').innerHTML = splitHtml;
 
-                const qrisContainer = document.getElementById('dynamicQrisContainer');
-                let qrisHtml = '';
-                const qrisMock = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><text x='50' y='45' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='8' font-weight='bold' fill='%2364748b'>Minta Admin</text><text x='50' y='55' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='8' font-weight='bold' fill='%2364748b'>Upload Template</text></svg>";
+                // --- TAMPILKAN KARTU INFORMASI BANK ---
+                const paymentContainer = document.getElementById('dynamicPaymentContainer');
+                let paymentHtml = '';
 
-                qrisContainer.className = (netZS > 0 && netSHI > 0) ? "grid grid-cols-2 gap-3 w-full" : "flex flex-col items-center w-full";
+                const buildBankCard = (brand, net, bgColor, textColor, borderColor) => {
+                    const bankData = bankDatabase[brand];
+                    if (!bankData || !bankData.bankName) {
+                        return `<div class="flex flex-col items-center justify-center p-3 bg-white border ${borderColor} rounded-xl w-full shadow-sm text-center">
+                                    <p class="text-[11px] font-black ${textColor} uppercase tracking-wide">Rekening ${brand} Belum Diatur</p>
+                                    <p class="text-[9px] text-slate-500 mt-1">Silakan hubungi admin.</p>
+                                </div>`;
+                    }
+                    return `
+                        <div class="flex flex-col p-3 bg-white border ${borderColor} rounded-xl w-full shadow-sm">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                                <p class="text-[11px] font-black ${textColor} uppercase tracking-wide">Transfer ke ${brand}</p>
+                                <p class="text-[11px] font-bold text-slate-600">Rp ${net.toLocaleString('id-ID')}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[10px] text-slate-500 font-semibold uppercase">Bank ${bankData.bankName}</p>
+                                <div class="flex justify-between items-center ${bgColor} p-2 rounded border border-slate-100">
+                                    <p class="text-xs font-black text-slate-800 tracking-wider">${bankData.accNumber}</p>
+                                    <button onclick="navigator.clipboard.writeText('${bankData.accNumber}'); showToast('Nomor Rekening Disalin!')" class="text-[9px] font-bold bg-white border ${borderColor} ${textColor} px-2 py-1 rounded hover:bg-slate-50 shadow-sm transition">SALIN</button>
+                                </div>
+                                <p class="text-[10px] text-slate-500 font-semibold uppercase pt-1">A.N: ${bankData.accName}</p>
+                            </div>
+                        </div>`;
+                };
 
-                if (netZS > 0) {
-                    qrisHtml += `<div class="flex flex-col items-center p-2 md:p-3 bg-white border border-indigo-100 rounded-xl w-full shadow-sm"><img src="${qrisDatabase['ZS'] || qrisMock}" class="w-full h-auto rounded"><p class="text-[9px] md:text-[11px] font-black text-indigo-800 mt-2">QRIS ZS</p><p class="text-[9px] md:text-[11px] font-bold text-slate-500">Rp ${netZS.toLocaleString('id-ID')}</p></div>`;
-                }
-                if (netSHI > 0) {
-                    qrisHtml += `<div class="flex flex-col items-center p-2 md:p-3 bg-white border border-rose-100 rounded-xl w-full shadow-sm"><img src="${qrisDatabase['SHI'] || qrisMock}" class="w-full h-auto rounded"><p class="text-[9px] md:text-[11px] font-black text-rose-800 mt-2">QRIS SHI</p><p class="text-[9px] md:text-[11px] font-bold text-slate-500">Rp ${netSHI.toLocaleString('id-ID')}</p></div>`;
-                }
-                qrisContainer.innerHTML = qrisHtml;
+                paymentContainer.className = (netZS > 0 && netSHI > 0) ? "grid grid-cols-1 md:grid-cols-2 gap-3 w-full" : "flex flex-col items-center w-full";
+
+                if (netZS > 0) paymentHtml += buildBankCard('ZS', netZS, 'bg-indigo-50/50', 'text-indigo-800', 'border-indigo-100');
+                if (netSHI > 0) paymentHtml += buildBankCard('SHI', netSHI, 'bg-rose-50/50', 'text-rose-800', 'border-rose-100');
+                
+                paymentContainer.innerHTML = paymentHtml;
+
                 document.getElementById('jastipSummaryBox').classList.remove('hidden');
 
                 const pendingGroup = activeItems.filter(o => o.status === 'Pending');
