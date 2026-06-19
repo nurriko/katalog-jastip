@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katalog Jastip ZS & Shi - Enterprise System</title>
+    
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
+        .hidden { display: none !important; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-up { animation: fadeInUp 0.3s ease-out forwards; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
+        .input-field { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; outline: none; font-size: 0.875rem; }
+        .input-field:focus { border-color: #6366f1; }
+        
+        /* Modifikasi Tabel Responsif */
+        .table-container { overflow-x: auto; max-height: 500px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; white-space: nowrap; } 
+        th { background: #f8fafc; position: sticky; top: 0; z-index: 10; padding: 12px; text-align: left; color: #64748b; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        
+        /* Hide scrollbar untuk Tab Navigasi HP */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        #masterPasteArea, .qris-paste-area { border: 2px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; position: relative; overflow: hidden; outline: none; transition: all 0.2s; }
+        #masterPasteArea { min-height: 140px; }
+        .qris-paste-area { min-height: 120px; }
+        #masterPasteArea.active, #masterPasteArea:focus, .qris-paste-area:focus { border-color: #6366f1; background: #f5f7ff; }
+        
+        .tab-btn { padding: 8px 16px; font-weight: 700; font-size: 0.875rem; color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; flex-shrink: 0; }
+        .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+
+        /* Toast Popup responsif HP */
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; gap: 10px; width: 90%; max-w: 400px; }
+        .toast { background: #10b981; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 0.875rem; animation: slideIn 0.3s ease-out forwards; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Overlay Loading */
+        #loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-[#fcfdfe] text-slate-800">
+
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <p class="text-sm font-bold text-slate-500 mt-4 text-center">Menghubungkan ke Database Cloud...</p>
+    </div>
+
+    <nav class="bg-indigo-950 text-white p-3 md:p-4 sticky top-0 z-50 shadow-md">
+        <div class="container mx-auto flex justify-between items-center max-w-7xl">
+            <div class="flex items-center gap-2 md:gap-3">
+                <div class="bg-white p-1.5 rounded-xl text-sm md:text-lg">🛍️</div>
+                <div>
+                    <h1 class="font-extrabold text-sm md:text-base tracking-tight leading-tight">Katalog ZS & SHI</h1>
+                    <p id="user-role-label" class="text-[9px] md:text-[10px] text-indigo-300 uppercase font-semibold">Sistem Terpusat</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 md:gap-4">
+                <span id="welcome-text" class="hidden text-[10px] md:text-xs font-semibold text-indigo-200"></span>
+                <button id="btnLogout" onclick="logout()" class="hidden px-3 py-1.5 md:px-4 md:py-2 bg-rose-600 hover:bg-rose-700 rounded-lg text-[10px] md:text-xs font-bold transition">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-3 md:p-4 max-w-7xl mb-10">
+
+        <div id="auth-view" class="max-w-md mx-auto my-8 md:my-12 animate-fade-up px-2 md:px-0 hidden">
+            <div class="card p-6 md:p-8 border-t-4 border-indigo-600">
+                <h2 id="auth-title" class="text-lg md:text-xl font-black text-center mb-6">LOGIN JASTIPER</h2>
+                <div class="space-y-4">
+                    <input type="text" id="username" placeholder="Username" class="input-field text-sm">
+                    <input type="password" id="password" placeholder="Password" class="input-field text-sm">
+                    
+                    <input type="number" id="reg-phone" placeholder="No. Telepon / WhatsApp" class="input-field text-sm hidden">
+                    <textarea id="reg-address" placeholder="Alamat Pengiriman Lengkap" class="input-field text-sm hidden" rows="3"></textarea>
+                    
+                    <button onclick="handleAuth()" id="auth-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-sm shadow-md">Masuk Aplikasi</button>
+                    <p onclick="toggleAuthMode()" id="auth-toggle-text" class="text-center text-xs text-indigo-600 font-semibold cursor-pointer hover:underline pt-2">Belum punya akun? Daftar sekarang</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="app-view" class="hidden animate-fade-up">
+            
+            <div id="admin-view" class="hidden">
+                <div class="flex gap-2 md:gap-4 border-b border-slate-200 mb-4 md:mb-6 overflow-x-auto hide-scrollbar pb-1">
+                    <button onclick="switchAdminTab('inventory')" id="tab-inventory" class="tab-btn active">📦 Kelola Stock</button>
+                    <button onclick="switchAdminTab('orders')" id="tab-orders" class="tab-btn">🛒 Data Pesanan</button>
+                    <button onclick="switchAdminTab('users')" id="tab-users" class="tab-btn">👥 Akun Jastiper</button>
+                </div>
+
+                <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                        <div class="card p-4 md:p-5 border-t-4 border-emerald-500 flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-extrabold text-sm uppercase mb-1 flex items-center gap-2">🔄 Sinkronisasi Excel</h3>
+                                <p class="text-[10px] md:text-[11px] text-slate-400 mb-3 font-semibold">Format template terbaru mendukung kolom SKU.</p>
+                                
+                                <select id="uploadBrandSelect" class="input-field mb-3 font-bold text-xs md:text-sm bg-slate-50">
+                                    <option value="ZS">Brand: ZASKIA SUNGKAR (ZS)</option>
+                                    <option value="SHI">Brand: SHI BY SHIREEN</option>
+                                </select>
+                                <input type="file" id="excelInput" accept=".xlsx, .xls" class="block w-full text-xs text-slate-500 mb-3 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700">
+                            </div>
+                            <div class="space-y-2 pt-2">
+                                <button onclick="handleExcelUpload()" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase hover:bg-emerald-700 transition shadow">Upload & Sinkronkan</button>
+                                <button onclick="downloadExcelTemplate()" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-lg font-bold text-xs border border-indigo-200 transition flex items-center justify-center gap-1">🟢 Download Template</button>
+                            </div>
+                        </div>
+
+                        <div class="card p-4 md:p-5 lg:col-span-2 border-t-4 border-rose-500">
+                            <h3 class="font-extrabold text-sm uppercase mb-3 flex items-center gap-2">🖼️ Master Photo Manager</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <select id="masterProductSelect" class="input-field mb-3 font-bold text-xs text-indigo-700 bg-indigo-50/50">
+                                        <option value="">-- Pilih Baju (Belum Ada Foto) --</option>
+                                    </select>
+                                    <div id="masterPasteArea" tabindex="0">
+                                        <p id="pasteText" class="text-[10px] font-bold text-slate-400 text-center uppercase px-4">KLIK KOTAK INI & CTRL+V<br>UNTUK PASTE FOTO</p>
+                                        <img id="masterPastePreview" class="hidden absolute inset-0 w-full h-full object-contain p-2 bg-white z-10">
+                                    </div>
+                                </div>
+                                <div class="flex flex-col justify-end">
+                                    <button id="btnSaveMasterPhoto" onclick="saveMasterPhoto()" class="hidden w-full bg-rose-600 text-white py-3 rounded-lg font-black text-xs uppercase tracking-widest shadow-lg hover:bg-rose-700 transition">Simpan Foto Baju</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-4 md:p-5">
+                        <div class="flex flex-col md:flex-row justify-between gap-3 mb-4">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-black text-sm uppercase">📦 List Data Stock</h3>
+                                <select id="adminBrandFilter" onchange="onAdminFilterChange()" class="input-field py-1.5 px-2 text-xs font-bold w-28 bg-slate-50">
+                                    <option value="ALL">All Brand</option>
+                                    <option value="ZS">ZS Saja</option>
+                                    <option value="SHI">SHI Saja</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
+                                <input type="text" id="searchInventory" oninput="onAdminFilterChange()" placeholder="Cari SKU / Baju..." class="input-field text-xs py-1.5 w-full md:w-48">
+                                <button onclick="deleteSelected()" class="bg-rose-500 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full md:w-auto">Hapus Terpilih</button>
+                            </div>
+                        </div>
+                        <div class="table-container border border-slate-200">
+                            <table>
+                                <thead>
+                                    <tr class="text-[10px] md:text-xs">
+                                        <th class="w-8 text-center"><input type="checkbox" id="checkAll" onchange="toggleCheckAll()"></th>
+                                        <th>Kode SKU</th>
+                                        <th>Brand</th>
+                                        <th>Nama Baju</th>
+                                        <th class="text-center">Variant</th>
+                                        <th class="text-center">Stock</th>
+                                        <th class="text-right">Harga Jual</th>
+                                        <th class="text-center">Diskon</th>
+                                        <th class="text-center">Foto</th>
+                                        <th class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminInventoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-orders" class="hidden card p-4 md:p-5 space-y-4">
+                    
+                    <h3 class="font-black text-sm uppercase">⚙️ Pengaturan QRIS Pembayaran</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                        <div class="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-xs uppercase mb-2 text-indigo-900">Upload QRIS - ZS</h4>
+                                <div id="qrisPasteAreaZS" tabindex="0" class="qris-paste-area border-indigo-300 bg-white mb-3 hover:bg-indigo-50">
+                                    <span id="qrisTextZS" class="text-[9px] text-slate-400 font-bold uppercase text-center px-2 pointer-events-none">Klik & CTRL+V Untuk Paste QRIS ZS</span>
+                                    <img id="previewQrisZS" class="absolute inset-0 w-full h-full object-contain p-2 hidden bg-white z-10">
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="saveQris('ZS')" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Simpan ZS</button>
+                                <button onclick="deleteQris('ZS')" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Hapus ZS</button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-rose-50/50 p-4 rounded-lg border border-rose-100 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-xs uppercase mb-2 text-rose-900">Upload QRIS - SHI</h4>
+                                <div id="qrisPasteAreaSHI" tabindex="0" class="qris-paste-area border-rose-300 bg-white mb-3 hover:bg-rose-50 focus:border-rose-600 focus:bg-rose-50">
+                                    <span id="qrisTextSHI" class="text-[9px] text-slate-400 font-bold uppercase text-center px-2 pointer-events-none">Klik & CTRL+V Untuk Paste QRIS SHI</span>
+                                    <img id="previewQrisSHI" class="absolute inset-0 w-full h-full object-contain p-2 hidden bg-white z-10">
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="saveQris('SHI')" class="w-full bg-rose-700 hover:bg-rose-800 text-white text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Simpan SHI</button>
+                                <button onclick="deleteQris('SHI')" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] py-2 rounded font-bold uppercase shadow-sm transition">Hapus SHI</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 border-t border-slate-200 gap-3">
+                        <h3 class="font-black text-sm uppercase">🛒 Rekap Sesi Transaksi</h3>
+                        <button onclick="downloadOrdersExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] md:text-xs px-3 py-2 rounded-lg transition shadow flex items-center gap-2 w-full md:w-auto justify-center">📊 Download Excel Detail Orderan</button>
+                    </div>
+                    
+                    <div class="table-container border border-slate-200">
+                        <table>
+                            <thead>
+                                <tr class="text-[10px] md:text-xs">
+                                    <th>Waktu Transaksi / Upload</th>
+                                    <th>Jastiper (Klik Nama)</th>
+                                    <th class="text-center">Item Baju</th>
+                                    <th class="text-right">Nominal Tagihan</th>
+                                    <th class="text-center">Status Sesi Ini</th>
+                                    <th class="text-center">Bukti Pembayaran</th>
+                                    <th class="text-center">Aksi Manajemen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminOrdersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="admin-tab-users" class="hidden card p-4 md:p-5 space-y-4">
+                    <h3 class="font-black text-sm uppercase">👥 Daftar Akun Jastiper</h3>
+                    <div class="table-container border border-slate-200">
+                        <table>
+                            <thead>
+                                <tr class="text-[10px] md:text-xs">
+                                    <th class="text-center">No</th>
+                                    <th>Username</th>
+                                    <th>No. Telp / WA</th>
+                                    <th>Alamat Kirim</th>
+                                    <th class="text-center">Status Akun</th>
+                                    <th class="text-center">Aksi Manajemen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="jastip-view" class="hidden">
+                <div class="flex gap-2 md:gap-4 border-b border-slate-200 mb-4 overflow-x-auto hide-scrollbar pb-1">
+                    <button onclick="switchJastipTab('catalog')" id="jastip-tab-catalog" class="tab-btn active">🛍️ Katalog Baju</button>
+                    <button onclick="switchJastipTab('myorders')" id="jastip-tab-myorders" class="tab-btn">📦 Keranjang Checkout <span id="cart-badge" class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden ml-1">0</span></button>
+                </div>
+
+                <div id="jastip-panel-catalog" class="space-y-4">
+                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-3">
+                        <h2 class="text-base md:text-lg font-black uppercase text-slate-800">Live Stock Catalog</h2>
+                        
+                        <div class="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 md:gap-3 w-full">
+                            <select id="jastipBrandFilter" onchange="renderJastipGrid()" class="input-field py-1.5 text-[10px] md:text-xs font-bold w-full md:w-36 bg-slate-50">
+                                <option value="ALL">Semua Brand</option>
+                                <option value="ZS">Zaskia Sungkar</option>
+                                <option value="SHI">Shi by Shireen</option>
+                            </select>
+                            <select id="jastipDiscountFilter" onchange="renderJastipGrid()" class="col-span-1 input-field py-1.5 text-[10px] md:text-xs font-bold w-full md:w-36 bg-slate-50">
+                                <option value="ALL">Semua Diskon</option>
+                                <option value="10-30">Diskon 10% - 30%</option>
+                                <option value="40-50">Diskon 40% - 50%</option>
+                                <option value=">50">Diskon > 50%</option>
+                            </select>
+                            <input type="text" id="searchKatalog" oninput="renderJastipGrid()" placeholder="Cari baju..." class="col-span-2 md:col-span-1 input-field py-1.5 text-xs w-full md:w-48">
+                        </div>
+                    </div>
+                    
+                    <div id="jastipGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"></div>
+                </div>
+
+                <div id="jastip-panel-myorders" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                        <div class="card p-4 md:p-5 lg:col-span-2 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-black text-sm uppercase text-slate-700">🛒 Keranjang Saya</h3>
+                                <button onclick="clearMyCart()" class="text-rose-600 hover:text-rose-800 text-[10px] md:text-[11px] font-bold uppercase px-2">🗑️ Kosongkan</button>
+                            </div>
+                            <div class="table-container border border-slate-200">
+                                <table>
+                                    <thead>
+                                        <tr class="text-[10px] md:text-xs">
+                                            <th class="text-center">Qty</th>
+                                            <th>Baju & Brand</th>
+                                            <th class="text-center">Variant</th>
+                                            <th class="text-right">Harga Asli</th>
+                                            <th class="text-center">Diskon</th>
+                                            <th class="text-right">Harga Net</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="jastipCartItemsBody"></tbody>
+                                </table>
+                            </div>
+                            
+                            <div id="jastipSummaryBox" class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2 hidden">
+                                <div class="flex justify-between text-xs font-semibold text-slate-500">
+                                    <span>Nominal Normal:</span>
+                                    <span id="sumGrossPrice">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between text-xs font-bold text-rose-600">
+                                    <span>Hemat Diskon:</span>
+                                    <span id="sumDiscountTotal">-Rp 0</span>
+                                </div>
+                                <hr class="border-slate-200 my-1">
+                                <div class="flex justify-between text-sm font-black text-indigo-950">
+                                    <span>Total Net Tagihan:</span>
+                                    <span id="sumNetPrice">Rp 0</span>
+                                </div>
+                                
+                                <div id="splitTotalContainer" class="space-y-1 pt-2 border-t border-slate-200 mt-2"></div>
+
+                                <div class="pt-3" id="actionCheckoutRow">
+                                    <button onclick="processSelesaiCheckout()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3 rounded-lg text-xs uppercase tracking-wider transition shadow">Checkout & Bayar Sekarang</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="qrisGatewayPanel" class="card p-4 md:p-5 border-t-4 border-amber-500 space-y-4 hidden">
+                            <div class="text-center bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                <h4 class="text-xs font-black text-amber-800 uppercase tracking-wide">⚠️ Batas Waktu Bayar</h4>
+                                <div id="countdownTimerBox" class="text-2xl font-black text-rose-600 mt-1 tracking-widest">10:00</div>
+                                <p class="text-[9px] md:text-[10px] text-slate-500 font-medium mt-0.5">Sistem membatalkan otomatis jika waktu habis!</p>
+                            </div>
+
+                            <div id="dynamicQrisContainer" class="flex flex-col gap-4 justify-center items-center w-full">
+                                </div>
+
+                            <div class="space-y-2 mt-2 pt-4 border-t border-slate-100">
+                                <label class="block text-[10px] md:text-[11px] font-bold text-slate-600 uppercase">Lampirkan Bukti (Bebas Format):</label>
+                                <input type="file" id="receiptFileInput" class="block w-full text-[10px] md:text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:font-bold file:bg-amber-100 file:text-amber-800">
+                            </div>
+                            <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-lg text-xs uppercase transition shadow">Kirim Bukti Valid</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="product-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
+        <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]">
+            <div class="w-full md:w-1/2 bg-slate-50 p-4 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
+                <img id="modal-img" class="w-full h-40 md:h-auto md:max-h-80 object-contain drop-shadow-md" src="" alt="Foto Baju">
+            </div>
+            <div class="w-full md:w-1/2 p-4 md:p-6 flex flex-col flex-grow overflow-y-auto">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <span id="modal-brand" class="text-[9px] md:text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded uppercase">BRAND</span>
+                        <h3 id="modal-title" class="font-black text-base md:text-lg text-slate-800 mt-1 uppercase leading-tight">Nama Produk</h3>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-rose-600 font-bold text-2xl leading-none">&times;</button>
+                </div>
+                
+                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg mb-4 border border-slate-100">
+                    <div>
+                        <p class="text-[9px] md:text-[10px] text-slate-500 uppercase font-bold">Harga Jual</p>
+                        <div id="modal-price-container"></div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] md:text-[10px] text-slate-500 uppercase font-bold">Diskon</p>
+                        <p id="modal-discount" class="text-xs font-extrabold text-rose-600 bg-rose-100 px-2 rounded">0%</p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-[10px] md:text-xs font-bold text-slate-500 uppercase mb-2">Pilih Size / Variant Tersedia</p>
+                    <div id="modal-variants-container" class="space-y-2"></div>
+                    
+                    <div class="mt-4 pt-3 border-t border-slate-100">
+                        <label class="text-[10px] md:text-xs font-bold text-slate-600 uppercase block mb-1">Jumlah Pcs:</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="modal-qty-input" value="1" min="1" class="input-field w-20 text-center font-black text-indigo-950 bg-slate-50 text-sm" disabled>
+                            <span id="modal-qty-max-label" class="text-[10px] font-bold text-slate-400"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-2">
+                    <button id="btnOrderSubmit" onclick="submitOrder()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-[11px] md:text-sm uppercase shadow-lg transition">Pilih Variant Dulu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="order-detail-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
+        <div class="bg-white rounded-xl max-w-4xl w-full p-4 md:p-6 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-start border-b pb-3 mb-3">
+                <div>
+                    <h3 class="font-black text-base md:text-lg text-indigo-950 uppercase tracking-tight leading-tight">Rincian Detail Sesi Orderan</h3>
+                    <p id="detail-modal-subtitle" class="text-[10px] md:text-xs text-slate-500 font-medium mt-1 leading-relaxed"></p>
+                </div>
+                <button onclick="closeOrderDetailModal()" class="text-slate-400 text-2xl font-bold hover:text-rose-600 leading-none">&times;</button>
+            </div>
+            <div class="overflow-y-auto flex-grow bg-slate-50 border border-slate-100 rounded-lg p-2 md:p-4">
+                <div class="overflow-x-auto hide-scrollbar">
+                    <table class="w-full text-left border-collapse min-w-[500px]">
+                        <thead>
+                            <tr class="text-[9px] md:text-[10px] text-slate-400 uppercase border-b border-slate-200">
+                                <th class="p-2">Waktu Keranjang</th>
+                                <th class="p-2">SKU</th>
+                                <th class="p-2">Brand & Baju</th>
+                                <th class="p-2 text-center">Var</th>
+                                <th class="p-2 text-center">Qty</th>
+                                <th class="p-2 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-modal-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="mt-3 flex justify-end border-t pt-3">
+                <div class="text-right">
+                    <p class="text-[9px] md:text-[10px] uppercase font-bold text-slate-500">Total Tagihan Sesi Ini</p>
+                    <p id="detail-modal-total" class="text-lg md:text-xl font-black text-indigo-600"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="proof-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
+        <div class="bg-white rounded-xl max-w-xl w-full p-4 space-y-3">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-black text-xs md:text-sm uppercase tracking-wider text-indigo-950">Bukti Bayar Sesi Transaksi</h3>
+                <button onclick="closeProofModal()" class="text-slate-400 text-xl font-bold hover:text-rose-600 leading-none">&times;</button>
+            </div>
+            <div id="proof-modal-body" class="bg-slate-50 p-2 rounded-lg flex items-center justify-center max-h-[70vh] overflow-y-auto w-full"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-uPPlBYLR0FBP595aKWxoEq_K7H5FFx4",
+            authDomain: "katalog-jastip.firebaseapp.com",
+            databaseURL: "https://katalog-jastip-default-rtdb.asia-southeast1.firebasedatabase.app/", 
+            projectId: "katalog-jastip",
+            storageBucket: "katalog-jastip.firebasestorage.app",
+            messagingSenderId: "819410088777",
+            appId: "1:819410088777:web:e587120af832befbcde098"
+        };
+
+        // Initialize Firebase SDK V8
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let isDbLoaded = false;
+
+        // --- CORE DATA & STATE ---
+        let isLoginMode = true;
+        let currentUser = null;
+        let selectedProductForOrder = null;
+        let selectedVariantForOrder = null;
+        let activeTimerInterval = null;
+
+        const superAdmins = { 'admin1': 'admin123', 'admin2': 'admin123' };
+
+        let userAccounts = [];
+        let inventoryData = [];
+        let photoDatabase = {};
+        let ordersData = [];
+        let qrisDatabase = { 'ZS': '', 'SHI': '' };
+
+        let tempMasterBase64 = null;
+        let tempQrisBase64 = { 'ZS': null, 'SHI': null };
+
+        // REAL-TIME DATABASE LISTENER
+        db.ref('/').on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            userAccounts = data.jastip_users || [];
+            inventoryData = data.jastip_inventory || [];
+            photoDatabase = data.jastip_photos || {};
+            ordersData = data.jastip_orders || [];
+            qrisDatabase = data.jastip_qris || { 'ZS': '', 'SHI': '' };
+
+            if(!isDbLoaded) {
+                isDbLoaded = true;
+                document.getElementById('loading-overlay').style.display = 'none';
+                init(); // Jalankan UI pertama kali
+            } else {
+                renderAllViews(); // Update UI langsung jika ada yang checkout dari perangkat lain
+            }
+        });
+
+        // Helper Fungsi untuk Save ke Firebase
+        function saveUsers() { db.ref('jastip_users').set(userAccounts); }
+        function saveInventory() { db.ref('jastip_inventory').set(inventoryData); }
+        function savePhotos() { db.ref('jastip_photos').set(photoDatabase); }
+        function saveOrders() { db.ref('jastip_orders').set(ordersData); }
+        function saveQrisDB() { db.ref('jastip_qris').set(qrisDatabase); }
+
+        // Interval Pengecekan Timer Auto Cancel
+        setInterval(() => {
+            if(!isDbLoaded || !currentUser) return;
+            let changed = false;
+            const now = Date.now();
+            
+            ordersData.forEach(order => {
+                if (order.status === 'Pending' && order.expiryTime && now > order.expiryTime) {
+                    if(order.username === currentUser || superAdmins[currentUser]) {
+                        order.status = 'Cancelled';
+                        const targetItem = inventoryData.find(item => item.sku === order.sku);
+                        if (targetItem) targetItem.stock += order.qty;
+                        changed = true;
+                    }
+                }
+            });
+
+            if (changed) {
+                saveOrders();
+                saveInventory();
+            }
+        }, 1000);
+
+        function renderAllViews() {
+            if (!currentUser) return;
+            if (superAdmins[currentUser]) {
+                renderAdminInventory();
+                renderAdminOrders();
+                renderAdminUsers();
+                updateMasterProductDropdown();
+                renderAdminQris();
+            } else {
+                renderJastipGrid();
+                renderJastipCartAndPayment();
+            }
+        }
+
+        // --- UTILITIES ---
+        function showToast(message, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.innerHTML = `<span class="mr-2">${isError ? '❌' : '✅'}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function parseDiscountValue(discountStr) {
+            if (!discountStr) return 0;
+            const num = parseFloat(discountStr.toString().replace(/[^0-9.]/g, ''));
+            return isNaN(num) ? 0 : num;
+        }
+
+        function downloadExcelTemplate() {
+            const headers = [
+                { "Kode SKU": "ZS-KAYLA-01", "Brand": "ZS", "Nama Baju": "Gamis Kayla Pleated", "Variant": "M", "Stock": 20, "Hpp": 150000, "Harga Jual": 350000, "Diskon": "10%" },
+                { "Kode SKU": "ZS-KAYLA-02", "Brand": "ZS", "Nama Baju": "Gamis Kayla Pleated", "Variant": "L", "Stock": 15, "Hpp": 150000, "Harga Jual": 350000, "Diskon": "15%" },
+                { "Kode SKU": "SHI-SCARF-01", "Brand": "SHI", "Nama Baju": "Shireen Scarf Monogram", "Variant": "All Size", "Stock": 40, "Hpp": 75000, "Harga Jual": 215000, "Diskon": "0" }
+            ];
+            const worksheet = XLSX.utils.json_to_sheet(headers);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+            XLSX.writeFile(workbook, "Template_Katalog_SKU.xlsx");
+            showToast("Template Excel Berhasil Diunduh!");
+        }
+
+        // --- AUTHENTICATION ---
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "LOGIN JASTIPER" : "DAFTAR AKUN";
+            document.getElementById('auth-btn').innerText = isLoginMode ? "Masuk Aplikasi" : "Daftar Akun Baru";
+            document.getElementById('auth-toggle-text').innerText = isLoginMode ? "Belum punya akun? Daftar sekarang" : "Sudah punya akun? Login";
+            
+            const phoneField = document.getElementById('reg-phone');
+            const addressField = document.getElementById('reg-address');
+            if (isLoginMode) {
+                phoneField.classList.add('hidden');
+                addressField.classList.add('hidden');
+            } else {
+                phoneField.classList.remove('hidden');
+                addressField.classList.remove('hidden');
+            }
+        }
+
+        function handleAuth() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            if(!u || !p) return showToast("Isi data lengkap!", true);
+
+            if (isLoginMode) {
+                if (superAdmins[u] && superAdmins[u] === p) loginSuccess(u, true);
+                else {
+                    const user = userAccounts.find(x => x.username === u && x.password === p);
+                    if (user) loginSuccess(u, false);
+                    else showToast("Akun tidak ditemukan!", true);
+                }
+            } else {
+                const phone = document.getElementById('reg-phone').value.trim();
+                const address = document.getElementById('reg-address').value.trim();
+                
+                if(!phone || !address) return showToast("Nomor telepon dan alamat wajib diisi!", true);
+                if (superAdmins[u] || userAccounts.find(x => x.username === u)) return showToast("Username telah terpakai!", true);
+                
+                userAccounts.push({username: u, password: p, phone: phone, address: address});
+                saveUsers(); 
+                showToast("Daftar Akun Berhasil!");
+                toggleAuthMode();
+            }
+        }
+
+        function loginSuccess(user, isAdmin) {
+            currentUser = user;
+            localStorage.setItem('jastip_currentUser', user);
+            document.getElementById('username').value = ""; document.getElementById('password').value = "";
+            document.getElementById('reg-phone').value = ""; document.getElementById('reg-address').value = "";
+            showApp(isAdmin);
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('jastip_currentUser');
+            document.getElementById('app-view').classList.add('hidden');
+            document.getElementById('auth-view').classList.remove('hidden');
+            document.getElementById('btnLogout').classList.add('hidden');
+            document.getElementById('welcome-text').classList.add('hidden');
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+        }
+
+        function init() {
+            document.getElementById('auth-view').classList.remove('hidden');
+            const savedUser = localStorage.getItem('jastip_currentUser');
+            if (savedUser) {
+                currentUser = savedUser;
+                showApp(!!superAdmins[savedUser]);
+            }
+        }
+
+        function showApp(isAdmin) {
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('app-view').classList.remove('hidden');
+            document.getElementById('btnLogout').classList.remove('hidden');
+            document.getElementById('welcome-text').classList.remove('hidden');
+            document.getElementById('welcome-text').innerText = `Halo, ${currentUser}`;
+
+            if (isAdmin) {
+                document.getElementById('user-role-label').innerText = "Super Admin Panel";
+                document.getElementById('admin-view').classList.remove('hidden');
+                document.getElementById('jastip-view').classList.add('hidden');
+                switchAdminTab('inventory');
+            } else {
+                document.getElementById('user-role-label').innerText = "Jastiper Access Panel";
+                document.getElementById('admin-view').classList.add('hidden');
+                document.getElementById('jastip-view').classList.remove('hidden');
+                switchJastipTab('catalog');
+            }
+            renderAllViews();
+        }
+
+        // --- ADMIN: EXCEL UPLOAD ---
+        function handleExcelUpload() {
+            const fileInput = document.getElementById('excelInput');
+            const targetBrand = document.getElementById('uploadBrandSelect').value;
+            if (!fileInput.files.length) return showToast("Pilih file Excel!", true);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                    if (jsonData.length === 0) return showToast("File Excel kosong.", true);
+
+                    const newData = jsonData.map(row => ({
+                        id: 'inv_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                        sku: (row['Kode SKU'] || 'N/A').toString().trim().toUpperCase(),
+                        brand: (row['Brand'] || targetBrand).toString().trim().toUpperCase(),
+                        product: (row['Nama Baju'] || '').toString().trim(),
+                        variant: (row['Variant'] || '').toString().trim(),
+                        stock: parseInt(row['Stock']) || 0,
+                        hpp: parseFloat(row['Hpp']) || 0,
+                        price: parseFloat(row['Harga Jual']) || 0,
+                        discount: (row['Diskon'] !== undefined ? row['Diskon'] : '0').toString().trim()
+                    })).filter(item => item.product !== '');
+
+                    if (newData.length === 0) return showToast("Format tidak cocok!", true);
+
+                    inventoryData = inventoryData.filter(item => item.brand !== targetBrand);
+                    inventoryData = [...inventoryData, ...newData];
+
+                    saveInventory(); 
+                    showToast(`Sinkronisasi ${targetBrand} sukses!`);
+                } catch (err) {
+                    showToast("Gagal memproses file.", true);
+                }
+            };
+            reader.readAsArrayBuffer(fileInput.files[0]);
+        }
+
+        // --- MASTER PHOTO ---
+        window.addEventListener('paste', (e) => {
+            if (document.getElementById('admin-view').classList.contains('hidden')) return;
+            const activeEl = document.activeElement;
+            let targetType = null;
+            if (activeEl.id === 'masterPasteArea') targetType = 'master';
+            else if (activeEl.id === 'qrisPasteAreaZS') targetType = 'qris-zs';
+            else if (activeEl.id === 'qrisPasteAreaSHI') targetType = 'qris-shi';
+            else return;
+
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let w = img.width, h = img.height;
+                            if (w > 600) { h *= 600 / w; w = 600; }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+
+                            if (targetType === 'master') {
+                                tempMasterBase64 = base64Image;
+                                document.getElementById('masterPastePreview').src = tempMasterBase64;
+                                document.getElementById('masterPastePreview').classList.remove('hidden');
+                                document.getElementById('pasteText').classList.add('hidden');
+                                document.getElementById('btnSaveMasterPhoto').classList.remove('hidden');
+                            } 
+                            else if (targetType === 'qris-zs') {
+                                tempQrisBase64['ZS'] = base64Image;
+                                document.getElementById('previewQrisZS').src = base64Image;
+                                document.getElementById('previewQrisZS').classList.remove('hidden');
+                                document.getElementById('qrisTextZS').classList.add('hidden');
+                            } 
+                            else if (targetType === 'qris-shi') {
+                                tempQrisBase64['SHI'] = base64Image;
+                                document.getElementById('previewQrisSHI').src = base64Image;
+                                document.getElementById('previewQrisSHI').classList.remove('hidden');
+                                document.getElementById('qrisTextSHI').classList.add('hidden');
+                            }
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        function updateMasterProductDropdown() {
+            const select = document.getElementById('masterProductSelect');
+            const uniqueProducts = [...new Set(inventoryData.map(item => item.product))];
+            const options = ['<option value="">-- Pilih Baju (Belum Ada Foto) --</option>'];
+            uniqueProducts.forEach(p => {
+                if (!photoDatabase[p]) options.push(`<option value="${p}">${p}</option>`);
+            });
+            select.innerHTML = options.join('');
+        }
+
+        function saveMasterPhoto() {
+            const target = document.getElementById('masterProductSelect').value;
+            if (!target || !tempMasterBase64) return showToast("Lengkapi pilihan!", true);
+            photoDatabase[target] = tempMasterBase64;
+            savePhotos(); 
+            tempMasterBase64 = null;
+            document.getElementById('masterPastePreview').classList.add('hidden');
+            document.getElementById('pasteText').classList.remove('hidden');
+            document.getElementById('btnSaveMasterPhoto').classList.add('hidden');
+            showToast("Foto berhasil diikat!");
+        }
+
+        function editPhoto(productName) {
+            const select = document.getElementById('masterProductSelect');
+            if(![...select.options].some(opt => opt.value === productName)){
+                const opt = document.createElement('option');
+                opt.value = productName; opt.text = `[EDIT] ${productName}`;
+                select.appendChild(opt);
+            }
+            select.value = productName;
+            showToast("Klik kotak paste area & CTRL+V untuk update foto.");
+            document.getElementById('masterPasteArea').focus();
+            window.scrollTo(0, 0);
+        }
+
+        // --- INVENTORY GRID ---
+        function onAdminFilterChange() { renderAdminInventory(); }
+
+        function renderAdminInventory() {
+            const body = document.getElementById('adminInventoryBody');
+            const search = document.getElementById('searchInventory').value.toLowerCase();
+            const brand = document.getElementById('adminBrandFilter').value;
+            
+            let filtered = inventoryData.filter(item => 
+                (item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) &&
+                (brand === "ALL" || item.brand === brand)
+            );
+
+            document.getElementById('checkAll').checked = false;
+            if (filtered.length === 0) {
+                body.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-slate-400">Data tidak ditemukan.</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = filtered.map(item => {
+                const discPercent = parseDiscountValue(item.discount);
+                return `
+                    <tr class="hover:bg-slate-50 text-[10px] md:text-xs">
+                        <td class="text-center"><input type="checkbox" class="row-check w-3 h-3" value="${item.id}"></td>
+                        <td class="font-mono font-bold tracking-tight text-slate-600">${item.sku}</td>
+                        <td class="font-bold text-indigo-700">${item.brand}</td>
+                        <td class="font-semibold truncate max-w-[120px] md:max-w-none" title="${item.product}">${item.product}</td>
+                        <td class="text-center"><span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">${item.variant}</span></td>
+                        <td class="text-center font-bold">${item.stock}</td>
+                        <td class="text-right font-bold">Rp ${item.price.toLocaleString('id-ID')}</td>
+                        <td class="text-center text-rose-500 font-extrabold">${discPercent > 0 ? discPercent + '%' : '0%'}</td>
+                        <td class="text-center">${photoDatabase[item.product] ? '✅' : '❌'}</td>
+                        <td class="text-center flex justify-center gap-1">
+                            <button onclick="editPhoto('${item.product.replace(/'/g, "\\'")}')" class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[9px] font-bold">Edit</button>
+                            <button onclick="deleteSingle('${item.id}')" class="bg-rose-50 text-rose-700 px-2 py-1 rounded text-[9px] font-bold">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleCheckAll() {
+            const isChecked = document.getElementById('checkAll').checked;
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = isChecked);
+        }
+
+        function deleteSingle(id) {
+            if(!confirm("Hapus baris ini?")) return;
+            inventoryData = inventoryData.filter(item => item.id !== id);
+            saveInventory();
+        }
+
+        function deleteSelected() {
+            const checks = document.querySelectorAll('.row-check:checked');
+            if(!checks.length) return showToast("Centang item dulu!", true);
+            if(!confirm(`Hapus massal ${checks.length} item?`)) return;
+            const ids = Array.from(checks).map(c => c.value);
+            inventoryData = inventoryData.filter(item => !ids.includes(item.id));
+            saveInventory();
+        }
+
+        function deleteAllFiltered() {
+            if(!confirm("Kosongkan daftar stock tampil?")) return;
+            const search = document.getElementById('searchInventory').value.toLowerCase();
+            const brand = document.getElementById('adminBrandFilter').value;
+            inventoryData = inventoryData.filter(item => !((item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) && (brand === "ALL" || item.brand === brand)));
+            saveInventory();
+        }
+
+        // --- ADMIN TABS & QRIS ---
+        function switchAdminTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            ['inventory', 'orders', 'users'].forEach(t => document.getElementById(`admin-tab-${t}`).classList.add('hidden'));
+            document.getElementById(`admin-tab-${tabName}`).classList.remove('hidden');
+            if(tabName === 'orders') renderAdminOrders();
+            if(tabName === 'users') renderAdminUsers();
+        }
+
+        function saveQris(brand) {
+            if (!tempQrisBase64[brand]) return showToast("Paste gambar QRIS dulu!", true);
+            qrisDatabase[brand] = tempQrisBase64[brand];
+            saveQrisDB(); 
+            tempQrisBase64[brand] = null;
+            showToast(`QRIS ${brand} disimpan!`);
+        }
+
+        function deleteQris(brand) {
+            if (!confirm(`Hapus template QRIS ${brand}?`)) return;
+            qrisDatabase[brand] = '';
+            saveQrisDB(); 
+            showToast(`QRIS ${brand} dihapus!`);
+        }
+
+        function renderAdminQris() {
+            if (qrisDatabase['ZS']) {
+                document.getElementById('previewQrisZS').src = qrisDatabase['ZS'];
+                document.getElementById('previewQrisZS').classList.remove('hidden');
+                document.getElementById('qrisTextZS').classList.add('hidden');
+            } else {
+                document.getElementById('previewQrisZS').src = '';
+                document.getElementById('previewQrisZS').classList.add('hidden');
+                document.getElementById('qrisTextZS').classList.remove('hidden');
+            }
+            if (qrisDatabase['SHI']) {
+                document.getElementById('previewQrisSHI').src = qrisDatabase['SHI'];
+                document.getElementById('previewQrisSHI').classList.remove('hidden');
+                document.getElementById('qrisTextSHI').classList.add('hidden');
+            } else {
+                document.getElementById('previewQrisSHI').src = '';
+                document.getElementById('previewQrisSHI').classList.add('hidden');
+                document.getElementById('qrisTextSHI').classList.remove('hidden');
+            }
+        }
+
+        // --- MANAJEMEN USER ---
+        function renderAdminUsers() {
+            const body = document.getElementById('adminUsersBody');
+            body.innerHTML = userAccounts.map((u, i) => `
+                <tr class="text-[10px] md:text-xs hover:bg-slate-50 border-b border-slate-100">
+                    <td class="text-center p-2">${i+1}</td>
+                    <td class="font-bold p-2 text-indigo-950">${u.username}</td>
+                    <td class="p-2 font-semibold text-slate-600">${u.phone || '-'}</td>
+                    <td class="p-2 truncate max-w-[100px] md:max-w-xs text-slate-500" title="${u.address || ''}">${u.address || '-'}</td>
+                    <td class="text-emerald-600 text-center font-bold p-2">Aktif</td>
+                    <td class="text-center p-2 flex justify-center gap-1">
+                        <button onclick="resetUserPassword('${u.username}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[9px] font-bold">Reset</button>
+                        <button onclick="deleteUser('${u.username}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[9px] font-bold">Hapus</button>
+                    </td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="text-center py-4 text-slate-400">Belum ada akun.</td></tr>`;
+        }
+
+        function resetUserPassword(username) {
+            const newPassword = prompt(`Password baru untuk "${username}":`);
+            if (newPassword === null || newPassword.trim() === "") return;
+            const user = userAccounts.find(u => u.username === username);
+            if (user) {
+                user.password = newPassword.trim();
+                saveUsers(); 
+                showToast(`Password ${username} di-reset!`);
+            }
+        }
+
+        function deleteUser(username) {
+            if (!confirm(`Hapus jastiper "${username}"?`)) return;
+            userAccounts = userAccounts.filter(u => u.username !== username);
+            saveUsers(); 
+            showToast(`Akun ${username} dihapus.`);
+        }
+
+        // --- REKAP PESANAN ADMIN ---
+        function renderAdminOrders() {
+            const body = document.getElementById('adminOrdersBody');
+            if (ordersData.length === 0) {
+                body.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Belum ada aktivitas.</td></tr>`;
+                return;
+            }
+            
+            const groups = {};
+            ordersData.forEach(o => {
+                const groupKey = `${o.username}||${o.date}`; 
+                if (!groups[groupKey]) {
+                    groups[groupKey] = {
+                        key: groupKey, username: o.username, date: o.date,
+                        status: o.status, totalQty: 0, totalNet: 0, latestProof: o.paymentProof || null, items: []
+                    };
+                }
+                groups[groupKey].totalQty += o.qty;
+                groups[groupKey].totalNet += o.netPrice;
+                groups[groupKey].items.push(o);
+                groups[groupKey].status = o.status; 
+                if(o.paymentProof) groups[groupKey].latestProof = o.paymentProof;
+            });
+
+            const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
+            
+            body.innerHTML = sortedGroups.map(g => {
+                let badgeHtml = '';
+                if (g.status === 'Pending') badgeHtml = `<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold text-[9px]">WAITING</span>`;
+                else if (g.status === 'Paid') badgeHtml = `<span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold text-[9px]">SUKSES</span>`;
+                else if (g.status === 'Cancelled') badgeHtml = `<span class="bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded font-bold text-[9px]">CANCELLED</span>`;
+                else badgeHtml = `<span class="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold text-[9px]">KERANJANG</span>`;
+
+                const proofAction = g.latestProof 
+                    ? `<button onclick="viewGroupPaymentProof('${g.key.replace(/'/g, "\\'")}')" class="bg-indigo-600 text-white font-bold text-[9px] px-2 py-1 rounded">Lihat Bukti</button>`
+                    : `<span class="text-slate-400 text-[9px] font-medium">-</span>`;
+                
+                const uInfo = userAccounts.find(u => u.username === g.username) || {};
+                const contactSub = uInfo.phone ? `<br><span class="text-[9px] text-slate-400 font-semibold">📞 ${uInfo.phone}</span>` : '';
+
+                return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 text-[10px] md:text-xs">
+                        <td class="text-slate-500 font-medium p-2">${g.date}</td>
+                        <td class="p-2">
+                            <button onclick="viewOrderDetail('${g.key.replace(/'/g, "\\'")}')" class="font-extrabold text-indigo-700 hover:underline text-left">
+                                ${g.username.toUpperCase()}
+                            </button>
+                            ${contactSub}
+                        </td>
+                        <td class="text-center font-black p-2">${g.totalQty} Pcs</td>
+                        <td class="text-right font-black p-2">Rp ${g.totalNet.toLocaleString('id-ID')}</td>
+                        <td class="text-center p-2">${badgeHtml}</td>
+                        <td class="text-center p-2">${proofAction}</td>
+                        <td class="text-center p-2">
+                            <button onclick="deleteOrderGroup('${g.key.replace(/'/g, "\\'")}')" class="text-rose-600 hover:text-rose-800 font-bold text-[10px]">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function viewOrderDetail(groupKey) {
+            const groupItems = ordersData.filter(o => `${o.username}||${o.date}` === groupKey);
+            if(groupItems.length === 0) return;
+            
+            const firstItem = groupItems[0];
+            const uInfo = userAccounts.find(u => u.username === firstItem.username) || {};
+            
+            document.getElementById('detail-modal-subtitle').innerHTML = `
+                <span class="font-bold text-slate-800">${firstItem.username.toUpperCase()}</span> | 📞 ${uInfo.phone || '-'}<br>
+                Sesi: ${firstItem.date}<br>
+                Alamat: ${uInfo.address || '-'}
+            `;
+
+            const tbody = document.getElementById('detail-modal-body');
+            let totalNet = 0;
+            tbody.innerHTML = groupItems.map(item => {
+                totalNet += item.netPrice;
+                return `
+                    <tr class="border-b border-slate-100 text-[10px] hover:bg-white">
+                        <td class="p-2 text-slate-400">${item.date.split(',')[1] || item.date}</td>
+                        <td class="p-2 font-mono font-bold text-slate-500">${item.sku}</td>
+                        <td class="p-2 font-bold text-slate-800">
+                            <span class="text-indigo-600">[${item.brand}]</span> <span class="truncate block max-w-[120px]">${item.product}</span>
+                        </td>
+                        <td class="p-2 text-center font-bold">${item.variant}</td>
+                        <td class="p-2 text-center font-black">${item.qty}</td>
+                        <td class="p-2 text-right font-black">Rp ${item.netPrice.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('detail-modal-total').innerText = `Rp ${totalNet.toLocaleString('id-ID')}`;
+            document.getElementById('order-detail-modal').classList.remove('hidden');
+        }
+
+        function closeOrderDetailModal() { document.getElementById('order-detail-modal').classList.add('hidden'); }
+
+        function viewGroupPaymentProof(groupKey) {
+            const itemsWithProof = ordersData.filter(o => `${o.username}||${o.date}` === groupKey && o.paymentProof);
+            if (itemsWithProof.length > 0) {
+                const match = itemsWithProof[0];
+                const proofData = match.paymentProof;
+                const container = document.getElementById('proof-modal-body');
+                
+                if (proofData.startsWith('data:image')) {
+                    container.innerHTML = `<img src="${proofData}" class="w-full h-auto object-contain rounded-md" alt="Bukti Transfer">`;
+                } else if (proofData.startsWith('data:application/pdf')) {
+                    container.innerHTML = `<iframe src="${proofData}" class="w-full h-[60vh] md:h-[65vh] rounded-md border border-slate-300"></iframe>`;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-6 md:py-10 space-y-4">
+                            <p class="text-xs font-bold text-slate-600">Dokumen File Khusus Terlampir.</p>
+                            <a href="${proofData}" download="Bukti_${match.username}" class="inline-block bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-xs shadow-md">📥 Download File</a>
+                        </div>`;
+                }
+                document.getElementById('proof-modal').classList.remove('hidden');
+            } else {
+                showToast("Bukti transfer kosong.", true);
+            }
+        }
+        function closeProofModal() { document.getElementById('proof-modal').classList.add('hidden'); }
+
+        function deleteOrderGroup(groupKey) {
+            if(!confirm(`Hapus pesanan ini? (Stok otomatis dikembalikan).`)) return;
+            const ordersToDelete = ordersData.filter(o => `${o.username}||${o.date}` === groupKey);
+            ordersToDelete.forEach(order => {
+                const invItem = inventoryData.find(item => item.sku === order.sku);
+                if (invItem) invItem.stock += order.qty;
+            });
+            ordersData = ordersData.filter(o => `${o.username}||${o.date}` !== groupKey);
+            
+            saveOrders();    
+            saveInventory(); 
+            showToast(`Sesi dihapus, stok dikembalikan!`);
+        }
+
+        // --- DOWNLOAD EXCELJS ---
+        async function downloadOrdersExcel() {
+            if (ordersData.length === 0) return showToast("Tidak ada data untuk diexport!", true);
+            try {
+                const sorted = [...ordersData].sort((a,b) => b.date.localeCompare(a.date));
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Rekap Penjualan');
+
+                worksheet.columns = [
+                    { header: 'No.', key: 'no', width: 5 },
+                    { header: 'Waktu Transaksi Sesi', key: 'date', width: 23 },
+                    { header: 'Username Jastiper', key: 'username', width: 20 },
+                    { header: 'No Telp / WA', key: 'phone', width: 18 },
+                    { header: 'Alamat Pengiriman', key: 'address', width: 40 },
+                    { header: 'Kode SKU', key: 'sku', width: 15 },
+                    { header: 'Brand', key: 'brand', width: 12 },
+                    { header: 'Nama Baju', key: 'product', width: 35 },
+                    { header: 'Variant', key: 'variant', width: 12 },
+                    { header: 'Qty (Pcs)', key: 'qty', width: 10 },
+                    { header: 'Harga Satuan (Rp)', key: 'unitPrice', width: 18 },
+                    { header: 'Total Harga Normal (Rp)', key: 'grossPrice', width: 22 },
+                    { header: 'Diskon (%)', key: 'discPercent', width: 12 },
+                    { header: 'Nominal Potongan (Rp)', key: 'discountCut', width: 22 },
+                    { header: 'Subtotal Net (Rp)', key: 'netPrice', width: 22 },
+                    { header: 'Status Pembayaran', key: 'status', width: 20 }
+                ];
+
+                sorted.forEach((o, index) => {
+                    const profile = userAccounts.find(u => u.username === o.username) || {};
+                    const discP = o.grossPrice > 0 ? Math.round((o.discountCut / o.grossPrice) * 100) : 0;
+                    
+                    worksheet.addRow({
+                        no: index + 1,
+                        date: o.date,
+                        username: o.username.toUpperCase(),
+                        phone: profile.phone || "-",
+                        address: profile.address || "-",
+                        sku: o.sku,
+                        brand: o.brand,
+                        product: o.product,
+                        variant: o.variant,
+                        qty: o.qty,
+                        unitPrice: o.grossPrice / o.qty,
+                        grossPrice: o.grossPrice,
+                        discPercent: discP + '%',
+                        discountCut: o.discountCut,
+                        netPrice: o.netPrice,
+                        status: o.status
+                    });
+                });
+
+                const headerRow = worksheet.getRow(1);
+                headerRow.eachCell((cell) => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+                    cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
+
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber > 1) {
+                        row.eachCell((cell, colNumber) => {
+                            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                            cell.alignment = { vertical: 'middle' };
+                            if ([11, 12, 14, 15].includes(colNumber)) cell.numFmt = '"Rp" #,##0';
+                        });
+                        row.getCell(1).alignment = { horizontal: 'center' };
+                        row.getCell(9).alignment = { horizontal: 'center' };
+                        row.getCell(10).alignment = { horizontal: 'center' };
+                        row.getCell(13).alignment = { horizontal: 'center' };
+                        row.getCell(16).alignment = { horizontal: 'center' };
+                    }
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, "Rekap_Lengkap_Orderan_Jastiper.xlsx");
+                showToast("Laporan Excel Detail diunduh!");
+            } catch (error) {
+                showToast("Kesalahan membuat Excel.", true);
+            }
+        }
+
+        // --- JASTIPER: VIEWS & TABS ---
+        function switchJastipTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`jastip-tab-${tabName}`).classList.add('active');
+            document.getElementById('jastip-panel-catalog').classList.add('hidden');
+            document.getElementById('jastip-panel-myorders').classList.add('hidden');
+            document.getElementById(`jastip-panel-${tabName}`).classList.remove('hidden');
+            if(tabName === 'myorders') renderJastipCartAndPayment();
+        }
+
+        function getGroupedProducts() {
+            const groups = {};
+            inventoryData.forEach(item => {
+                const key = item.product;
+                if (!groups[key]) {
+                    groups[key] = { sku: item.sku, brand: item.brand, product: key, price: item.price, discount: item.discount, totalStock: 0, variants: [] };
+                }
+                groups[key].totalStock += item.stock;
+                groups[key].variants.push({ id: item.id, size: item.variant, qty: item.stock, sku: item.sku });
+            });
+            return Object.values(groups);
+        }
+
+        function renderJastipGrid() {
+            const grid = document.getElementById('jastipGrid');
+            const search = document.getElementById('searchKatalog').value.toLowerCase();
+            const brandFilter = document.getElementById('jastipBrandFilter').value;
+            const discountFilter = document.getElementById('jastipDiscountFilter').value;
+            
+            let groups = getGroupedProducts().filter(p => p.product.toLowerCase().includes(search));
+            if (brandFilter !== "ALL") groups = groups.filter(p => p.brand === brandFilter);
+            
+            if (discountFilter !== "ALL") {
+                groups = groups.filter(p => {
+                    const dVal = parseDiscountValue(p.discount);
+                    if (discountFilter === "10-30") return dVal >= 10 && dVal <= 30;
+                    if (discountFilter === "40-50") return dVal >= 40 && dVal <= 50;
+                    if (discountFilter === ">50") return dVal > 50;
+                    return true;
+                });
+            }
+
+            const myActiveCartCount = ordersData.filter(o => o.username === currentUser && o.status === 'Cart').length;
+            const badge = document.getElementById('cart-badge');
+            if(myActiveCartCount > 0) { badge.innerText = myActiveCartCount; badge.classList.remove('hidden'); }
+            else { badge.classList.add('hidden'); }
+
+            if (!groups.length) {
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400 text-sm">Produk tidak ditemukan.</div>`;
+                return;
+            }
+
+            const placeholder = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23f1f5f9"/><text x="50" y="50" dominant-baseline="middle" text-anchor="middle" font-family='sans-serif' font-size="9" fill="%2394a3b8">No Image</text></svg>`;
+
+            grid.innerHTML = groups.map(p => {
+                const dVal = parseDiscountValue(p.discount);
+                const netPrice = p.price - (p.price * dVal / 100);
+                
+                const priceDisplay = dVal > 0 
+                    ? `<div>
+                        <span class="line-through text-slate-400 text-[9px] md:text-[10px] block font-semibold">Rp ${p.price.toLocaleString('id-ID')}</span>
+                        <span class="text-[11px] md:text-xs font-black text-rose-600 block">Rp ${netPrice.toLocaleString('id-ID')}</span>
+                       </div>`
+                    : `<div class="text-[11px] md:text-xs font-black text-slate-800">Rp ${p.price.toLocaleString('id-ID')}</div>`;
+
+                const discBadge = dVal > 0 ? `<span class="absolute top-2 right-2 bg-rose-500 text-white px-1.5 py-0.5 rounded text-[8px] md:text-[9px] font-black shadow-sm">${dVal}%</span>` : '';
+
+                return `
+                    <div class="card overflow-hidden cursor-pointer flex flex-col justify-between hover:shadow-md transition" onclick="openModal('${p.product.replace(/'/g, "\\'")}')">
+                        <div class="h-36 md:h-48 bg-slate-50 flex justify-center items-center relative p-2 md:p-3">
+                            <span class="absolute top-2 left-2 bg-white/90 px-1.5 py-0.5 rounded text-[8px] md:text-[9px] font-black shadow-sm">${p.brand}</span>
+                            ${discBadge}
+                            <img src="${photoDatabase[p.product] || placeholder}" class="w-full h-full object-contain mix-blend-multiply">
+                        </div>
+                        <div class="p-2.5 md:p-3 bg-white space-y-1">
+                            <h4 class="font-extrabold text-[10px] md:text-[11px] leading-tight text-slate-800 uppercase line-clamp-2">${p.product}</h4>
+                            ${priceDisplay}
+                            <div class="flex justify-between items-center pt-1.5 mt-1 border-t border-slate-50">
+                                <span class="text-[8px] md:text-[9px] text-slate-400 font-bold">Stok Sisa</span>
+                                <span class="text-[10px] md:text-xs font-black text-indigo-600">${p.totalStock}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- CATALOG ORDER MODAL BARANG ---
+        function openModal(productName) {
+            const product = getGroupedProducts().find(p => p.product === productName);
+            if (!product) return;
+            selectedProductForOrder = product;
+            selectedVariantForOrder = null;
+
+            const dVal = parseDiscountValue(product.discount);
+            const netPrice = product.price - (product.price * dVal / 100);
+
+            document.getElementById('modal-brand').innerText = product.brand;
+            document.getElementById('modal-title').innerText = product.product;
+            document.getElementById('modal-img').src = photoDatabase[product.product] || "";
+            document.getElementById('modal-discount').innerText = dVal > 0 ? dVal + '%' : '0%';
+
+            const priceContainer = document.getElementById('modal-price-container');
+            if (dVal > 0) {
+                priceContainer.innerHTML = `
+                    <span class="line-through text-slate-400 text-[10px] md:text-xs block font-semibold">Rp ${product.price.toLocaleString('id-ID')}</span>
+                    <span class="text-sm md:text-base font-black text-rose-600 block leading-none">Rp ${netPrice.toLocaleString('id-ID')}</span>
+                `;
+            } else {
+                priceContainer.innerHTML = `<span class="text-sm md:text-base font-black text-slate-800 block leading-none">Rp ${product.price.toLocaleString('id-ID')}</span>`;
+            }
+
+            const container = document.getElementById('modal-variants-container');
+            container.innerHTML = product.variants.map(v => `
+                <div class="flex justify-between items-center p-2 border border-slate-200 rounded-lg ${v.qty > 0 ? 'cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/20' : 'opacity-40 bg-slate-50'} transition variant-row" 
+                     id="vr-${v.id}" onclick="${v.qty > 0 ? `selectVariant('${v.id}')` : ''}">
+                    <span class="font-bold text-[10px] md:text-xs text-slate-700">Size: ${v.size}</span>
+                    ${v.qty > 0 ? `<span class="text-[9px] md:text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Sisa ${v.qty}</span>` : `<span class="text-[9px] md:text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">Habis</span>`}
+                </div>
+            `).join('');
+
+            const qtyInput = document.getElementById('modal-qty-input');
+            qtyInput.value = 1;
+            qtyInput.disabled = true;
+            document.getElementById('modal-qty-max-label').innerText = "";
+
+            document.getElementById('btnOrderSubmit').disabled = true;
+            document.getElementById('btnOrderSubmit').innerText = "Pilih Size Dulu";
+            document.getElementById('product-modal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('product-modal').classList.add('hidden'); }
+
+        function selectVariant(variantId) {
+            document.querySelectorAll('.variant-row').forEach(el => el.classList.remove('border-indigo-600', 'bg-indigo-50', 'ring-2', 'ring-indigo-100'));
+            document.getElementById(`vr-${variantId}`).classList.add('border-indigo-600', 'bg-indigo-50', 'ring-2', 'ring-indigo-100');
+            
+            selectedVariantForOrder = selectedProductForOrder.variants.find(v => v.id === variantId);
+            const qtyInput = document.getElementById('modal-qty-input');
+            qtyInput.disabled = false;
+            qtyInput.max = selectedVariantForOrder.qty;
+            qtyInput.value = 1;
+            document.getElementById('modal-qty-max-label').innerText = `(Maks: ${selectedVariantForOrder.qty})`;
+            document.getElementById('btnOrderSubmit').disabled = false;
+            document.getElementById('btnOrderSubmit').innerText = `PESAN SEKARANG (${selectedVariantForOrder.size})`;
+        }
+
+        function submitOrder() {
+            if (!selectedVariantForOrder) return;
+            const qtyInput = document.getElementById('modal-qty-input');
+            const requestedQty = parseInt(qtyInput.value) || 1;
+            if(requestedQty < 1 || requestedQty > selectedVariantForOrder.qty) return showToast("Jumlah tidak valid!", true);
+            
+            const target = inventoryData.find(item => item.id === selectedVariantForOrder.id);
+            if (!target || target.stock < requestedQty) return showToast("Maaf, sisa stock tidak mencukupi!", true);
+
+            target.stock -= requestedQty;
+            const discPercent = parseDiscountValue(target.discount);
+            const singleGross = target.price;
+            const singleCut = (singleGross * discPercent) / 100;
+            const singleNet = singleGross - singleCut;
+
+            const itemOrder = {
+                id: 'ord_' + Date.now() + Math.random().toString(36).substr(2, 4),
+                date: new Date().toLocaleString('id-ID'),
+                username: currentUser,
+                sku: target.sku, brand: target.brand, product: target.product, variant: target.variant,
+                qty: requestedQty, grossPrice: singleGross * requestedQty, discountCut: singleCut * requestedQty, netPrice: singleNet * requestedQty,
+                status: 'Cart', expiryTime: null, paymentProof: null
+            };
+
+            ordersData.push(itemOrder);
+            saveOrders();    
+            saveInventory(); 
+            showToast(`Dimasukkan ke keranjang!`);
+            closeModal();
+        }
+
+        // --- JASTIPER: KERANJANG ---
+        function renderJastipCartAndPayment() {
+            const body = document.getElementById('jastipCartItemsBody');
+            const myOrders = ordersData.filter(o => o.username === currentUser);
+            
+            if (myOrders.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">Keranjang Anda kosong.</td></tr>`;
+                document.getElementById('jastipSummaryBox').classList.add('hidden');
+                document.getElementById('qrisGatewayPanel').classList.add('hidden');
+                return;
+            }
+
+            body.innerHTML = myOrders.map(o => {
+                const matchedInv = inventoryData.find(i => i.sku === o.sku);
+                const currentDiscPercent = matchedInv ? parseDiscountValue(matchedInv.discount) : 0;
+                return `
+                    <tr class="text-[10px] md:text-xs hover:bg-slate-50/50">
+                        <td class="text-center font-black">${o.qty}</td>
+                        <td class="whitespace-nowrap"><span class="text-[8px] font-black uppercase text-indigo-700 bg-indigo-50 px-1 rounded">${o.brand}</span> <span class="font-semibold block truncate max-w-[120px] md:max-w-[200px]" title="${o.product}">${o.product}</span></td>
+                        <td class="text-center font-bold">${o.variant}</td>
+                        <td class="text-right text-slate-400">Rp ${o.grossPrice.toLocaleString('id-ID')}</td>
+                        <td class="text-center text-rose-500 font-bold">${currentDiscPercent}%</td>
+                        <td class="text-right font-black text-indigo-950">Rp ${o.netPrice.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const activeItems = myOrders.filter(o => o.status === 'Cart' || o.status === 'Pending');
+            
+            if(activeItems.length > 0) {
+                let gross = 0, cut = 0, net = 0, netZS = 0, netSHI = 0;
+                activeItems.forEach(i => { 
+                    gross += i.grossPrice; cut += i.discountCut; net += i.netPrice; 
+                    if(i.brand === 'ZS') netZS += i.netPrice;
+                    if(i.brand === 'SHI') netSHI += i.netPrice;
+                });
+
+                document.getElementById('sumGrossPrice').innerText = `Rp ${gross.toLocaleString('id-ID')}`;
+                document.getElementById('sumDiscountTotal').innerText = `-Rp ${cut.toLocaleString('id-ID')}`;
+                document.getElementById('sumNetPrice').innerText = `Rp ${net.toLocaleString('id-ID')}`;
+
+                let splitHtml = '';
+                if (netZS > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-indigo-900 bg-indigo-50/70 p-2 rounded-lg border border-indigo-100"><span>Pembayaran ZS:</span><span>Rp ${netZS.toLocaleString('id-ID')}</span></div>`;
+                if (netSHI > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-rose-900 bg-rose-50/70 p-2 rounded-lg border border-rose-100"><span>Pembayaran SHI:</span><span>Rp ${netSHI.toLocaleString('id-ID')}</span></div>`;
+                document.getElementById('splitTotalContainer').innerHTML = splitHtml;
+
+                const qrisContainer = document.getElementById('dynamicQrisContainer');
+                let qrisHtml = '';
+                const qrisMock = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><text x='50' y='45' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='8' font-weight='bold' fill='%2364748b'>Minta Admin</text><text x='50' y='55' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='8' font-weight='bold' fill='%2364748b'>Upload Template</text></svg>";
+
+                qrisContainer.className = (netZS > 0 && netSHI > 0) ? "grid grid-cols-2 gap-3 w-full" : "flex flex-col items-center w-full";
+
+                if (netZS > 0) {
+                    qrisHtml += `<div class="flex flex-col items-center p-2 md:p-3 bg-white border border-indigo-100 rounded-xl w-full shadow-sm"><img src="${qrisDatabase['ZS'] || qrisMock}" class="w-full h-auto rounded"><p class="text-[9px] md:text-[11px] font-black text-indigo-800 mt-2">QRIS ZS</p><p class="text-[9px] md:text-[11px] font-bold text-slate-500">Rp ${netZS.toLocaleString('id-ID')}</p></div>`;
+                }
+                if (netSHI > 0) {
+                    qrisHtml += `<div class="flex flex-col items-center p-2 md:p-3 bg-white border border-rose-100 rounded-xl w-full shadow-sm"><img src="${qrisDatabase['SHI'] || qrisMock}" class="w-full h-auto rounded"><p class="text-[9px] md:text-[11px] font-black text-rose-800 mt-2">QRIS SHI</p><p class="text-[9px] md:text-[11px] font-bold text-slate-500">Rp ${netSHI.toLocaleString('id-ID')}</p></div>`;
+                }
+                qrisContainer.innerHTML = qrisHtml;
+                document.getElementById('jastipSummaryBox').classList.remove('hidden');
+
+                const pendingGroup = activeItems.filter(o => o.status === 'Pending');
+                if (pendingGroup.length > 0) {
+                    document.getElementById('actionCheckoutRow').classList.add('hidden');
+                    document.getElementById('qrisGatewayPanel').classList.remove('hidden');
+                    startClientCountdown(pendingGroup[0].expiryTime);
+                } else {
+                    document.getElementById('actionCheckoutRow').classList.remove('hidden');
+                    document.getElementById('qrisGatewayPanel').classList.add('hidden');
+                    if(activeTimerInterval) clearInterval(activeTimerInterval);
+                }
+            } else {
+                document.getElementById('jastipSummaryBox').classList.add('hidden');
+                document.getElementById('qrisGatewayPanel').classList.add('hidden');
+            }
+        }
+
+        function clearMyCart() {
+            if(!confirm("Kosongkan keranjang? Stok akan dikembalikan.")) return;
+            ordersData.forEach(o => {
+                if((o.status === 'Cart' || o.status === 'Pending') && o.username === currentUser) {
+                    const inv = inventoryData.find(i => i.sku === o.sku);
+                    if(inv) inv.stock += o.qty;
+                }
+            });
+            ordersData = ordersData.filter(o => o.username !== currentUser);
+            saveOrders();
+            saveInventory();
+            showToast("Keranjang dikosongkan.");
+        }
+
+        function processSelesaiCheckout() {
+            const activeCart = ordersData.filter(o => o.username === currentUser && o.status === 'Cart');
+            if(activeCart.length === 0) return showToast("Keranjang kosong!", true);
+
+            const limitTenMinutes = Date.now() + 10 * 60 * 1000;
+            const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
+
+            activeCart.forEach(order => {
+                order.status = 'Pending';
+                order.expiryTime = limitTenMinutes;
+                order.date = unifiedCheckoutTime;
+            });
+
+            saveOrders(); 
+            showToast("Checkout Sukses! Instruksi pembayaran aktif.");
+        }
+
+        function startClientCountdown(targetTimestamp) {
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            function updateBox() {
+                const distance = targetTimestamp - Date.now();
+                if (distance <= 0) {
+                    document.getElementById('countdownTimerBox').innerText = "00:00";
+                    clearInterval(activeTimerInterval);
+                    return;
+                }
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                document.getElementById('countdownTimerBox').innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            updateBox();
+            activeTimerInterval = setInterval(updateBox, 1000);
+        }
+
+        function submitReceiptPayment() {
+            const fileInput = document.getElementById('receiptFileInput');
+            if(!fileInput.files.length) return showToast("Wajib melampirkan bukti transfer!", true);
+            const pendingOrders = ordersData.filter(o => o.username === currentUser && o.status === 'Pending');
+            if(pendingOrders.length === 0) return showToast("Waktu pembayaran habis!", true);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                const finalUploadTime = new Date().toLocaleString('id-ID'); 
+
+                pendingOrders.forEach(order => {
+                    order.status = 'Paid';
+                    order.paymentProof = base64Data;
+                    order.date = finalUploadTime; 
+                });
+
+                saveOrders(); 
+                showToast("Bukti Terkirim! Pembayaran Berhasil.");
+                fileInput.value = "";
+                if(activeTimerInterval) clearInterval(activeTimerInterval);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+    </script>
+</body>
+</html>
