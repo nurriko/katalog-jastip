@@ -136,7 +136,6 @@
                             <h3 class="font-extrabold text-sm uppercase mb-3 flex items-center gap-2">🖼️ Master Photo Manager</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <!-- TAMBAHAN: Dropdown Filter Brand untuk Master Photo -->
                                     <select id="masterBrandFilter" onchange="updateMasterProductDropdown()" class="input-field mb-2 font-bold text-xs bg-slate-50">
                                         <option value="ALL">Semua Brand</option>
                                         <option value="ZS">Brand: ZS Saja</option>
@@ -364,7 +363,6 @@
 
                             <div class="space-y-2 mt-2 pt-4 border-t border-slate-100">
                                 <label class="block text-[10px] md:text-[11px] font-bold text-slate-600 uppercase">Lampirkan Bukti (Bebas Format):</label>
-                                <!-- INPUT FILE TANPA BATASAN -->
                                 <input type="file" id="receiptFileInput" class="block w-full text-[10px] md:text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:font-bold file:bg-amber-100 file:text-amber-800">
                             </div>
                             <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-lg text-xs uppercase transition shadow">Kirim Bukti Valid</button>
@@ -378,11 +376,9 @@
     <!-- JASTIPER ORDER MODAL (RESPONSIF HP) -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
         <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]">
-            <!-- Bagian Gambar Dibuat Lebih Pendek di HP -->
             <div class="w-full md:w-1/2 bg-slate-50 p-4 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
                 <img id="modal-img" class="w-full h-40 md:h-auto md:max-h-80 object-contain drop-shadow-md" src="" alt="Foto Baju">
             </div>
-            <!-- Bagian Konten Scrollable di HP -->
             <div class="w-full md:w-1/2 p-4 md:p-6 flex flex-col flex-grow overflow-y-auto">
                 <div class="flex justify-between items-start mb-3">
                     <div>
@@ -466,7 +462,6 @@
                 <h3 class="font-black text-xs md:text-sm uppercase tracking-wider text-indigo-950">Bukti Bayar Sesi Transaksi</h3>
                 <button onclick="closeProofModal()" class="text-slate-400 text-xl font-bold hover:text-rose-600 leading-none">&times;</button>
             </div>
-            <!-- Body dinamis -->
             <div id="proof-modal-body" class="bg-slate-50 p-2 rounded-lg flex items-center justify-center max-h-[70vh] overflow-y-auto w-full"></div>
         </div>
     </div>
@@ -499,7 +494,6 @@
 
         const superAdmins = { 'admin1': 'admin123', 'admin2': 'admin123' };
 
-        // DEKLARASI GLOBAL DATABASE
         let userAccounts = [];
         let inventoryData = [];
         let photoDatabase = {};
@@ -511,7 +505,7 @@
 
         let tempMasterBase64 = null;
 
-        // REAL-TIME DATABASE LISTENER
+        // --- PERBAIKAN LOGIKA: REAL-TIME LISTENER ---
         db.ref('/').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             userAccounts = data.jastip_users || [];
@@ -537,36 +531,39 @@
                 <p class="text-xs text-slate-500 mt-2 text-center max-w-sm font-semibold">${error.message}</p>
                 <button onclick="window.location.reload()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md">Coba Muat Ulang</button>
             `;
-            console.error("FIREBASE ERROR:", error);
         });
-
-        // Helper Fungsi untuk Save ke Firebase
-        function saveUsers() { db.ref('jastip_users').set(userAccounts); }
-        function saveInventory() { db.ref('jastip_inventory').set(inventoryData); }
-        function savePhotos() { db.ref('jastip_photos').set(photoDatabase); }
-        function saveOrders() { db.ref('jastip_orders').set(ordersData); }
-        function saveBankDB() { db.ref('jastip_bank').set(bankDatabase); }
 
         // Interval Pengecekan Timer Auto Cancel
         setInterval(() => {
             if(!isDbLoaded || !currentUser) return;
-            let changed = false;
             const now = Date.now();
             
-            ordersData.forEach(order => {
-                if (order.status === 'Pending' && order.expiryTime && now > order.expiryTime) {
-                    if(order.username === currentUser || superAdmins[currentUser]) {
-                        order.status = 'Cancelled';
-                        const targetItem = inventoryData.find(item => item.sku === order.sku);
-                        if (targetItem) targetItem.stock += order.qty;
-                        changed = true;
-                    }
-                }
-            });
+            // Cek lokal dulu sebelum hit ke database server
+            const needsCancel = ordersData.some(o => o.status === 'Pending' && o.expiryTime && now > o.expiryTime && (o.username === currentUser || superAdmins[currentUser]));
+            
+            if (needsCancel) {
+                db.ref('/').once('value').then(snap => {
+                    const data = snap.val() || {};
+                    let cInv = data.jastip_inventory || [];
+                    let cOrd = data.jastip_orders || [];
+                    let changed = false;
 
-            if (changed) {
-                saveOrders();
-                saveInventory();
+                    cOrd.forEach(order => {
+                        if (order.status === 'Pending' && order.expiryTime && now > order.expiryTime) {
+                            if(order.username === currentUser || superAdmins[currentUser]) {
+                                order.status = 'Cancelled';
+                                const targetItem = cInv.find(item => item.sku === order.sku);
+                                if (targetItem) targetItem.stock += order.qty;
+                                changed = true;
+                            }
+                        }
+                    });
+
+                    if (changed) {
+                        db.ref('jastip_inventory').set(cInv);
+                        db.ref('jastip_orders').set(cOrd);
+                    }
+                });
             }
         }, 1000);
 
@@ -650,10 +647,14 @@
                 if(!phone || !address) return showToast("Nomor telepon dan alamat wajib diisi!", true);
                 if (superAdmins[u] || userAccounts.find(x => x.username === u)) return showToast("Username telah terpakai!", true);
                 
-                userAccounts.push({username: u, password: p, phone: phone, address: address});
-                saveUsers(); 
-                showToast("Daftar Akun Berhasil!");
-                toggleAuthMode();
+                db.ref('jastip_users').once('value').then(s => {
+                    let arr = s.val() || [];
+                    arr.push({username: u, password: p, phone: phone, address: address});
+                    db.ref('jastip_users').set(arr).then(() => {
+                        showToast("Daftar Akun Berhasil!");
+                        toggleAuthMode();
+                    });
+                });
             }
         }
 
@@ -734,20 +735,22 @@
 
                     if (newData.length === 0) return showToast("Format tidak cocok!", true);
 
-                    // --- LOGIKA BARU: UPDATE JIKA SKU SAMA, TAMBAH JIKA SKU BARU ---
-                    newData.forEach(newItem => {
-                        const existingIndex = inventoryData.findIndex(oldItem => oldItem.sku === newItem.sku);
+                    db.ref('jastip_inventory').once('value').then(s => {
+                        let inv = s.val() || [];
+                        inv = inv.filter(item => item.brand !== targetBrand);
                         
-                        if(existingIndex >= 0) {
-                            newItem.id = inventoryData[existingIndex].id;
-                            inventoryData[existingIndex] = newItem;
-                        } else {
-                            inventoryData.push(newItem);
-                        }
+                        newData.forEach(newItem => {
+                            const existingIndex = inv.findIndex(oldItem => oldItem.sku === newItem.sku);
+                            if(existingIndex >= 0) {
+                                newItem.id = inv[existingIndex].id;
+                                inv[existingIndex] = newItem;
+                            } else {
+                                inv.push(newItem);
+                            }
+                        });
+                        db.ref('jastip_inventory').set(inv);
+                        showToast(`Sinkronisasi ${targetBrand} sukses ditambahkan/diperbarui!`);
                     });
-
-                    saveInventory(); 
-                    showToast(`Sinkronisasi ${targetBrand} sukses ditambahkan/diperbarui!`);
                 } catch (err) {
                     showToast("Gagal memproses file.", true);
                 }
@@ -793,7 +796,6 @@
             }
         });
 
-        // TAMBAHAN: Update berdasarkan filter brand di dropdown Master Photo Manager
         function updateMasterProductDropdown() {
             const select = document.getElementById('masterProductSelect');
             const brandFilter = document.getElementById('masterBrandFilter').value;
@@ -814,13 +816,18 @@
         function saveMasterPhoto() {
             const target = document.getElementById('masterProductSelect').value;
             if (!target || !tempMasterBase64) return showToast("Lengkapi pilihan!", true);
-            photoDatabase[target] = tempMasterBase64;
-            savePhotos(); 
-            tempMasterBase64 = null;
-            document.getElementById('masterPastePreview').classList.add('hidden');
-            document.getElementById('pasteText').classList.remove('hidden');
-            document.getElementById('btnSaveMasterPhoto').classList.add('hidden');
-            showToast("Foto berhasil diikat!");
+            
+            db.ref('jastip_photos').once('value').then(s => {
+                let photos = s.val() || {};
+                photos[target] = tempMasterBase64;
+                db.ref('jastip_photos').set(photos).then(() => {
+                    tempMasterBase64 = null;
+                    document.getElementById('masterPastePreview').classList.add('hidden');
+                    document.getElementById('pasteText').classList.remove('hidden');
+                    document.getElementById('btnSaveMasterPhoto').classList.add('hidden');
+                    showToast("Foto berhasil diikat!");
+                });
+            });
         }
 
         function editPhoto(productName) {
@@ -884,25 +891,36 @@
 
         function deleteSingle(id) {
             if(!confirm("Hapus baris ini?")) return;
-            inventoryData = inventoryData.filter(item => item.id !== id);
-            saveInventory();
+            db.ref('jastip_inventory').once('value').then(s => {
+                let inv = s.val() || [];
+                inv = inv.filter(i => i.id !== id);
+                db.ref('jastip_inventory').set(inv);
+            });
         }
 
         function deleteSelected() {
             const checks = document.querySelectorAll('.row-check:checked');
             if(!checks.length) return showToast("Centang item dulu!", true);
             if(!confirm(`Hapus massal ${checks.length} item?`)) return;
+            
             const ids = Array.from(checks).map(c => c.value);
-            inventoryData = inventoryData.filter(item => !ids.includes(item.id));
-            saveInventory();
+            db.ref('jastip_inventory').once('value').then(s => {
+                let inv = s.val() || [];
+                inv = inv.filter(item => !ids.includes(item.id));
+                db.ref('jastip_inventory').set(inv);
+            });
         }
 
         function deleteAllFiltered() {
             if(!confirm("Kosongkan daftar stock tampil?")) return;
             const search = document.getElementById('searchInventory').value.toLowerCase();
             const brand = document.getElementById('adminBrandFilter').value;
-            inventoryData = inventoryData.filter(item => !((item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) && (brand === "ALL" || item.brand === brand)));
-            saveInventory();
+            
+            db.ref('jastip_inventory').once('value').then(s => {
+                let inv = s.val() || [];
+                inv = inv.filter(item => !((item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) && (brand === "ALL" || item.brand === brand)));
+                db.ref('jastip_inventory').set(inv);
+            });
         }
 
         // --- ADMIN TABS & PENGATURAN REKENING BANK ---
@@ -922,9 +940,13 @@
 
             if (!bankName || !accNumber || !accName) return showToast("Harap isi semua kolom rekening!", true);
 
-            bankDatabase[brand] = { bankName, accNumber, accName };
-            saveBankDB();
-            showToast(`Informasi Rekening ${brand} berhasil disimpan!`);
+            db.ref('jastip_bank').once('value').then(s => {
+                let bankDB = s.val() || {};
+                bankDB[brand] = { bankName, accNumber, accName };
+                db.ref('jastip_bank').set(bankDB).then(() => {
+                    showToast(`Informasi Rekening ${brand} berhasil disimpan!`);
+                });
+            });
         }
 
         function renderAdminBankInfo() {
@@ -957,19 +979,26 @@
         function resetUserPassword(username) {
             const newPassword = prompt(`Password baru untuk "${username}":`);
             if (newPassword === null || newPassword.trim() === "") return;
-            const user = userAccounts.find(u => u.username === username);
-            if (user) {
-                user.password = newPassword.trim();
-                saveUsers(); 
-                showToast(`Password ${username} di-reset!`);
-            }
+            
+            db.ref('jastip_users').once('value').then(s => {
+                let arr = s.val() || [];
+                let userIndex = arr.findIndex(u => u.username === username);
+                if (userIndex >= 0) {
+                    arr[userIndex].password = newPassword.trim();
+                    db.ref('jastip_users').set(arr);
+                    showToast(`Password ${username} di-reset!`);
+                }
+            });
         }
 
         function deleteUser(username) {
             if (!confirm(`Hapus jastiper "${username}"?`)) return;
-            userAccounts = userAccounts.filter(u => u.username !== username);
-            saveUsers(); 
-            showToast(`Akun ${username} dihapus.`);
+            db.ref('jastip_users').once('value').then(s => {
+                let arr = s.val() || [];
+                arr = arr.filter(u => u.username !== username);
+                db.ref('jastip_users').set(arr);
+                showToast(`Akun ${username} dihapus.`);
+            });
         }
 
         // --- REKAP PESANAN ADMIN ---
@@ -1095,18 +1124,28 @@
         }
         function closeProofModal() { document.getElementById('proof-modal').classList.add('hidden'); }
 
+        // --- TRANSAKSI FIREBASE: AMAN DARI RACE CONDITION KETIKA MENGHAPUS SESI ---
         function deleteOrderGroup(groupKey) {
             if(!confirm(`Hapus pesanan ini? (Stok otomatis dikembalikan).`)) return;
-            const ordersToDelete = ordersData.filter(o => `${o.username}||${o.date}` === groupKey);
-            ordersToDelete.forEach(order => {
-                const invItem = inventoryData.find(item => item.sku === order.sku);
-                if (invItem) invItem.stock += order.qty;
-            });
-            ordersData = ordersData.filter(o => `${o.username}||${o.date}` !== groupKey);
             
-            saveOrders();    
-            saveInventory(); 
-            showToast(`Sesi dihapus, stok dikembalikan!`);
+            db.ref('/').once('value').then(s => {
+                let data = s.val() || {};
+                let cInv = data.jastip_inventory || [];
+                let cOrd = data.jastip_orders || [];
+                
+                const ordersToDelete = cOrd.filter(o => `${o.username}||${o.date}` === groupKey);
+                
+                ordersToDelete.forEach(order => {
+                    const invItem = cInv.find(item => item.sku === order.sku);
+                    if (invItem) invItem.stock += order.qty;
+                });
+                
+                cOrd = cOrd.filter(o => `${o.username}||${o.date}` !== groupKey);
+                
+                db.ref('jastip_inventory').set(cInv);
+                db.ref('jastip_orders').set(cOrd);
+                showToast(`Sesi dihapus, stok dikembalikan!`);
+            });
         }
 
         // --- DOWNLOAD EXCELJS ---
@@ -1339,35 +1378,52 @@
             document.getElementById('btnOrderSubmit').innerText = `PESAN SEKARANG (${selectedVariantForOrder.size})`;
         }
 
+        // --- TRANSAKSI FIREBASE: AMAN DARI RACE CONDITION KETIKA MENAMBAH KERANJANG ---
         function submitOrder() {
             if (!selectedVariantForOrder) return;
             const qtyInput = document.getElementById('modal-qty-input');
             const requestedQty = parseInt(qtyInput.value) || 1;
-            if(requestedQty < 1 || requestedQty > selectedVariantForOrder.qty) return showToast("Jumlah tidak valid!", true);
+            if(requestedQty < 1) return showToast("Jumlah tidak valid!", true);
             
-            const target = inventoryData.find(item => item.id === selectedVariantForOrder.id);
-            if (!target || target.stock < requestedQty) return showToast("Maaf, sisa stock tidak mencukupi!", true);
+            // Tarik data terbaru tepat detik ini dari database sebelum mengurangi stok
+            db.ref('/').once('value').then(snap => {
+                let data = snap.val() || {};
+                let cInv = data.jastip_inventory || [];
+                let cOrd = data.jastip_orders || [];
+                
+                const targetIndex = cInv.findIndex(item => item.id === selectedVariantForOrder.id);
+                if (targetIndex < 0 || cInv[targetIndex].stock < requestedQty) {
+                    showToast("Maaf, stok baru saja habis direbut jastiper lain!", true);
+                    closeModal();
+                    return;
+                }
 
-            target.stock -= requestedQty;
-            const discPercent = parseDiscountValue(target.discount);
-            const singleGross = target.price;
-            const singleCut = (singleGross * discPercent) / 100;
-            const singleNet = singleGross - singleCut;
+                // Kurangi stok di Cloud
+                cInv[targetIndex].stock -= requestedQty;
 
-            const itemOrder = {
-                id: 'ord_' + Date.now() + Math.random().toString(36).substr(2, 4),
-                date: new Date().toLocaleString('id-ID'),
-                username: currentUser,
-                sku: target.sku, brand: target.brand, product: target.product, variant: target.variant,
-                qty: requestedQty, grossPrice: singleGross * requestedQty, discountCut: singleCut * requestedQty, netPrice: singleNet * requestedQty,
-                status: 'Cart', expiryTime: null, paymentProof: null
-            };
+                const target = cInv[targetIndex];
+                const discPercent = parseDiscountValue(target.discount);
+                const singleGross = target.price;
+                const singleCut = (singleGross * discPercent) / 100;
+                const singleNet = singleGross - singleCut;
 
-            ordersData.push(itemOrder);
-            saveOrders();    
-            saveInventory(); 
-            showToast(`Dimasukkan ke keranjang!`);
-            closeModal();
+                const itemOrder = {
+                    id: 'ord_' + Date.now() + Math.random().toString(36).substr(2, 4),
+                    date: new Date().toLocaleString('id-ID'),
+                    username: currentUser,
+                    sku: target.sku, brand: target.brand, product: target.product, variant: target.variant,
+                    qty: requestedQty, grossPrice: singleGross * requestedQty, discountCut: singleCut * requestedQty, netPrice: singleNet * requestedQty,
+                    status: 'Cart', expiryTime: null, paymentProof: null
+                };
+
+                cOrd.push(itemOrder);
+
+                db.ref('jastip_inventory').set(cInv);
+                db.ref('jastip_orders').set(cOrd);
+
+                showToast(`Sukses memasukkan ${requestedQty} PCS ke keranjang belanja!`);
+                closeModal();
+            });
         }
 
         // --- JASTIPER: KERANJANG & TAMPILAN REKENING PEMBAYARAN ---
@@ -1470,35 +1526,52 @@
             }
         }
 
+        // --- TRANSAKSI FIREBASE: AMAN DARI RACE CONDITION KETIKA MENGKOSONGKAN KERANJANG ---
         function clearMyCart() {
             if(!confirm("Kosongkan keranjang? Stok akan dikembalikan.")) return;
-            ordersData.forEach(o => {
-                if((o.status === 'Cart' || o.status === 'Pending') && o.username === currentUser) {
-                    const inv = inventoryData.find(i => i.sku === o.sku);
-                    if(inv) inv.stock += o.qty;
-                }
+            
+            db.ref('/').once('value').then(s => {
+                let data = s.val() || {};
+                let cInv = data.jastip_inventory || [];
+                let cOrd = data.jastip_orders || [];
+                
+                cOrd.forEach(o => {
+                    if((o.status === 'Cart' || o.status === 'Pending') && o.username === currentUser) {
+                        const invItem = cInv.find(i => i.sku === o.sku);
+                        if(invItem) invItem.stock += o.qty;
+                    }
+                });
+                
+                cOrd = cOrd.filter(o => o.username !== currentUser);
+                
+                db.ref('jastip_inventory').set(cInv);
+                db.ref('jastip_orders').set(cOrd);
+                showToast("Keranjang dikosongkan.");
             });
-            ordersData = ordersData.filter(o => o.username !== currentUser);
-            saveOrders();
-            saveInventory();
-            showToast("Keranjang dikosongkan.");
         }
 
+        // --- TRANSAKSI FIREBASE: CHECKOUT ---
         function processSelesaiCheckout() {
-            const activeCart = ordersData.filter(o => o.username === currentUser && o.status === 'Cart');
-            if(activeCart.length === 0) return showToast("Keranjang kosong!", true);
+            db.ref('jastip_orders').once('value').then(s => {
+                let cOrd = s.val() || [];
+                const activeCart = cOrd.filter(o => o.username === currentUser && o.status === 'Cart');
+                
+                if(activeCart.length === 0) return showToast("Keranjang kosong!", true);
 
-            const limitTenMinutes = Date.now() + 10 * 60 * 1000;
-            const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
+                const limitTenMinutes = Date.now() + 10 * 60 * 1000;
+                const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
 
-            activeCart.forEach(order => {
-                order.status = 'Pending';
-                order.expiryTime = limitTenMinutes;
-                order.date = unifiedCheckoutTime;
+                cOrd.forEach(order => {
+                    if(order.username === currentUser && order.status === 'Cart') {
+                        order.status = 'Pending';
+                        order.expiryTime = limitTenMinutes;
+                        order.date = unifiedCheckoutTime;
+                    }
+                });
+
+                db.ref('jastip_orders').set(cOrd);
+                showToast("Checkout Sukses! Instruksi pembayaran aktif.");
             });
-
-            saveOrders(); 
-            showToast("Checkout Sukses! Instruksi pembayaran aktif.");
         }
 
         function startClientCountdown(targetTimestamp) {
@@ -1518,27 +1591,39 @@
             activeTimerInterval = setInterval(updateBox, 1000);
         }
 
+        // --- TRANSAKSI FIREBASE: UPLOAD BUKTI BAYAR ---
         function submitReceiptPayment() {
             const fileInput = document.getElementById('receiptFileInput');
             if(!fileInput.files.length) return showToast("Wajib melampirkan bukti transfer!", true);
-            const pendingOrders = ordersData.filter(o => o.username === currentUser && o.status === 'Pending');
-            if(pendingOrders.length === 0) return showToast("Waktu pembayaran habis!", true);
-
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Data = e.target.result;
                 const finalUploadTime = new Date().toLocaleString('id-ID'); 
 
-                pendingOrders.forEach(order => {
-                    order.status = 'Paid';
-                    order.paymentProof = base64Data;
-                    order.date = finalUploadTime; 
-                });
+                db.ref('jastip_orders').once('value').then(s => {
+                    let cOrd = s.val() || [];
+                    let hasPending = false;
 
-                saveOrders(); 
-                showToast("Bukti Terkirim! Pembayaran Berhasil.");
-                fileInput.value = "";
-                if(activeTimerInterval) clearInterval(activeTimerInterval);
+                    cOrd.forEach(order => {
+                        if(order.username === currentUser && order.status === 'Pending') {
+                            order.status = 'Paid';
+                            order.paymentProof = base64Data;
+                            order.date = finalUploadTime; 
+                            hasPending = true;
+                        }
+                    });
+
+                    if(hasPending) {
+                        db.ref('jastip_orders').set(cOrd).then(() => {
+                            showToast("Bukti Terkirim! Pembayaran Berhasil.");
+                            fileInput.value = "";
+                            if(activeTimerInterval) clearInterval(activeTimerInterval);
+                        });
+                    } else {
+                        showToast("Waktu pembayaran habis!", true);
+                    }
+                });
             };
             reader.readAsDataURL(fileInput.files[0]);
         }
