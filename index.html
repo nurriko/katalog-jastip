@@ -361,11 +361,7 @@
                                 <!-- Info Rekening akan di-inject disini melalui Javascript -->
                             </div>
 
-                            <div class="space-y-2 mt-2 pt-4 border-t border-slate-100">
-                                <label class="block text-[10px] md:text-[11px] font-bold text-slate-600 uppercase">Lampirkan Bukti (Bebas Format):</label>
-                                <input type="file" id="receiptFileInput" class="block w-full text-[10px] md:text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:font-bold file:bg-amber-100 file:text-amber-800">
-                            </div>
-                            <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-lg text-xs uppercase transition shadow">Kirim Bukti Valid</button>
+                            <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-lg text-xs uppercase transition shadow mt-2">Kirim Bukti Valid</button>
                         </div>
                     </div>
                 </div>
@@ -376,9 +372,11 @@
     <!-- JASTIPER ORDER MODAL (RESPONSIF HP) -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
         <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]">
+            <!-- Bagian Gambar Dibuat Lebih Pendek di HP -->
             <div class="w-full md:w-1/2 bg-slate-50 p-4 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
                 <img id="modal-img" class="w-full h-40 md:h-auto md:max-h-80 object-contain drop-shadow-md" src="" alt="Foto Baju">
             </div>
+            <!-- Bagian Konten Scrollable di HP -->
             <div class="w-full md:w-1/2 p-4 md:p-6 flex flex-col flex-grow overflow-y-auto">
                 <div class="flex justify-between items-start mb-3">
                     <div>
@@ -459,10 +457,10 @@
     <div id="proof-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-xl max-w-xl w-full p-4 space-y-3">
             <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-black text-xs md:text-sm uppercase tracking-wider text-indigo-950">Bukti Bayar Sesi Transaksi</h3>
+                <h3 class="font-black text-xs md:text-sm uppercase tracking-wider text-indigo-950">Bukti Pembayaran Per Brand</h3>
                 <button onclick="closeProofModal()" class="text-slate-400 text-xl font-bold hover:text-rose-600 leading-none">&times;</button>
             </div>
-            <div id="proof-modal-body" class="bg-slate-50 p-2 rounded-lg flex items-center justify-center max-h-[70vh] overflow-y-auto w-full"></div>
+            <div id="proof-modal-body" class="bg-slate-50 p-2 rounded-lg flex flex-col items-center max-h-[70vh] overflow-y-auto w-full"></div>
         </div>
     </div>
 
@@ -494,6 +492,7 @@
 
         const superAdmins = { 'admin1': 'admin123', 'admin2': 'admin123' };
 
+        // DEKLARASI GLOBAL DATABASE
         let userAccounts = [];
         let inventoryData = [];
         let photoDatabase = {};
@@ -505,7 +504,7 @@
 
         let tempMasterBase64 = null;
 
-        // --- PERBAIKAN LOGIKA: REAL-TIME LISTENER ---
+        // --- REAL-TIME DATABASE LISTENER ---
         db.ref('/').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             userAccounts = data.jastip_users || [];
@@ -531,15 +530,28 @@
                 <p class="text-xs text-slate-500 mt-2 text-center max-w-sm font-semibold">${error.message}</p>
                 <button onclick="window.location.reload()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md">Coba Muat Ulang</button>
             `;
+            console.error("FIREBASE ERROR:", error);
         });
+
+        // Helper Fungsi untuk Save ke Firebase
+        function saveUsers() { db.ref('jastip_users').set(userAccounts); }
+        function saveInventory() { db.ref('jastip_inventory').set(inventoryData); }
+        function savePhotos() { db.ref('jastip_photos').set(photoDatabase); }
+        function saveOrders() { db.ref('jastip_orders').set(ordersData); }
+        function saveBankDB() { db.ref('jastip_bank').set(bankDatabase); }
 
         // Interval Pengecekan Timer Auto Cancel
         setInterval(() => {
             if(!isDbLoaded || !currentUser) return;
             const now = Date.now();
             
-            // Cek lokal dulu sebelum hit ke database server
-            const needsCancel = ordersData.some(o => o.status === 'Pending' && o.expiryTime && now > o.expiryTime && (o.username === currentUser || superAdmins[currentUser]));
+            // Cek lokal terlebih dahulu jika ada yang harus di-cancel berdasarkan username spesifik (case-insensitive)
+            const needsCancel = ordersData.some(o => 
+                o.status === 'Pending' && 
+                o.expiryTime && 
+                now > o.expiryTime && 
+                (o.username.toLowerCase() === currentUser.toLowerCase() || Object.keys(superAdmins).map(k=>k.toLowerCase()).includes(currentUser.toLowerCase()))
+            );
             
             if (needsCancel) {
                 db.ref('/').once('value').then(snap => {
@@ -550,7 +562,7 @@
 
                     cOrd.forEach(order => {
                         if (order.status === 'Pending' && order.expiryTime && now > order.expiryTime) {
-                            if(order.username === currentUser || superAdmins[currentUser]) {
+                            if(order.username.toLowerCase() === currentUser.toLowerCase() || Object.keys(superAdmins).map(k=>k.toLowerCase()).includes(currentUser.toLowerCase())) {
                                 order.status = 'Cancelled';
                                 const targetItem = cInv.find(item => item.sku === order.sku);
                                 if (targetItem) targetItem.stock += order.qty;
@@ -569,7 +581,8 @@
 
         function renderAllViews() {
             if (!currentUser) return;
-            if (superAdmins[currentUser]) {
+            // Evaluasi admin (Case-insensitive)
+            if (Object.keys(superAdmins).map(k => k.toLowerCase()).includes(currentUser.toLowerCase())) {
                 renderAdminInventory();
                 renderAdminOrders();
                 renderAdminUsers();
@@ -610,7 +623,7 @@
             showToast("Template Excel Berhasil Diunduh!");
         }
 
-        // --- AUTHENTICATION ---
+        // --- AUTHENTICATION (CASE INSENSITIVE) ---
         function toggleAuthMode() {
             isLoginMode = !isLoginMode;
             document.getElementById('auth-title').innerText = isLoginMode ? "LOGIN JASTIPER" : "DAFTAR AKUN";
@@ -629,27 +642,45 @@
         }
 
         function handleAuth() {
-            const u = document.getElementById('username').value.trim();
+            const rawU = document.getElementById('username').value.trim();
             const p = document.getElementById('password').value.trim();
-            if(!u || !p) return showToast("Isi data lengkap!", true);
+            if(!rawU || !p) return showToast("Isi data lengkap!", true);
+            
+            const u = rawU.toLowerCase(); // Ubah ke huruf kecil untuk pencocokan
 
             if (isLoginMode) {
-                if (superAdmins[u] && superAdmins[u] === p) loginSuccess(u, true);
-                else {
-                    const user = userAccounts.find(x => x.username === u && x.password === p);
-                    if (user) loginSuccess(u, false);
-                    else showToast("Akun tidak ditemukan!", true);
+                // Cek Admin (Case Insensitive)
+                const adminKey = Object.keys(superAdmins).find(k => k.toLowerCase() === u);
+                if (adminKey && superAdmins[adminKey] === p) {
+                    loginSuccess(adminKey, true);
+                    return;
+                }
+                
+                // Cek Jastiper (Case Insensitive)
+                const user = userAccounts.find(x => x.username.toLowerCase() === u && x.password === p);
+                if (user) {
+                    loginSuccess(user.username, false); // Memakai huruf asli saat mereka daftar
+                } else {
+                    showToast("Akun tidak ditemukan atau password salah!", true);
                 }
             } else {
                 const phone = document.getElementById('reg-phone').value.trim();
                 const address = document.getElementById('reg-address').value.trim();
                 
                 if(!phone || !address) return showToast("Nomor telepon dan alamat wajib diisi!", true);
-                if (superAdmins[u] || userAccounts.find(x => x.username === u)) return showToast("Username telah terpakai!", true);
+                
+                // Cek apakah username sudah ada (Case Insensitive)
+                if (Object.keys(superAdmins).find(k => k.toLowerCase() === u) || userAccounts.find(x => x.username.toLowerCase() === u)) {
+                    return showToast("Username telah terpakai!", true);
+                }
                 
                 db.ref('jastip_users').once('value').then(s => {
                     let arr = s.val() || [];
-                    arr.push({username: u, password: p, phone: phone, address: address});
+                    // Cek ganda di dalam janji Firebase
+                    if (arr.find(x => x.username.toLowerCase() === u)) {
+                         return showToast("Username telah terpakai!", true);
+                    }
+                    arr.push({username: rawU, password: p, phone: phone, address: address}); // Menyimpan teks asli
                     db.ref('jastip_users').set(arr).then(() => {
                         showToast("Daftar Akun Berhasil!");
                         toggleAuthMode();
@@ -681,7 +712,8 @@
             const savedUser = localStorage.getItem('jastip_currentUser');
             if (savedUser) {
                 currentUser = savedUser;
-                showApp(!!superAdmins[savedUser]);
+                const isAdmin = Object.keys(superAdmins).map(k => k.toLowerCase()).includes(currentUser.toLowerCase());
+                showApp(isAdmin);
             }
         }
 
@@ -969,8 +1001,8 @@
                     <td class="p-2 truncate max-w-[100px] md:max-w-xs text-slate-500" title="${u.address || ''}">${u.address || '-'}</td>
                     <td class="text-emerald-600 text-center font-bold p-2">Aktif</td>
                     <td class="text-center p-2 flex justify-center gap-1">
-                        <button onclick="resetUserPassword('${u.username}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[9px] font-bold">Reset</button>
-                        <button onclick="deleteUser('${u.username}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[9px] font-bold">Hapus</button>
+                        <button onclick="resetUserPassword('${u.username.replace(/'/g, "\\'")}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[9px] font-bold">Reset</button>
+                        <button onclick="deleteUser('${u.username.replace(/'/g, "\\'")}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[9px] font-bold">Hapus</button>
                     </td>
                 </tr>
             `).join('') || `<tr><td colspan="6" class="text-center py-4 text-slate-400">Belum ada akun.</td></tr>`;
@@ -982,7 +1014,7 @@
             
             db.ref('jastip_users').once('value').then(s => {
                 let arr = s.val() || [];
-                let userIndex = arr.findIndex(u => u.username === username);
+                let userIndex = arr.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
                 if (userIndex >= 0) {
                     arr[userIndex].password = newPassword.trim();
                     db.ref('jastip_users').set(arr);
@@ -995,7 +1027,7 @@
             if (!confirm(`Hapus jastiper "${username}"?`)) return;
             db.ref('jastip_users').once('value').then(s => {
                 let arr = s.val() || [];
-                arr = arr.filter(u => u.username !== username);
+                arr = arr.filter(u => u.username.toLowerCase() !== username.toLowerCase());
                 db.ref('jastip_users').set(arr);
                 showToast(`Akun ${username} dihapus.`);
             });
@@ -1011,18 +1043,18 @@
             
             const groups = {};
             ordersData.forEach(o => {
-                const groupKey = `${o.username}||${o.date}`; 
+                const groupKey = `${o.username.toLowerCase()}||${o.date}`; 
                 if (!groups[groupKey]) {
                     groups[groupKey] = {
                         key: groupKey, username: o.username, date: o.date,
-                        status: o.status, totalQty: 0, totalNet: 0, latestProof: o.paymentProof || null, items: []
+                        status: o.status, totalQty: 0, totalNet: 0, hasProof: false, items: []
                     };
                 }
                 groups[groupKey].totalQty += o.qty;
                 groups[groupKey].totalNet += o.netPrice;
                 groups[groupKey].items.push(o);
                 groups[groupKey].status = o.status; 
-                if(o.paymentProof) groups[groupKey].latestProof = o.paymentProof;
+                if(o.paymentProof) groups[groupKey].hasProof = true;
             });
 
             const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
@@ -1034,11 +1066,11 @@
                 else if (g.status === 'Cancelled') badgeHtml = `<span class="bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded font-bold text-[9px]">CANCELLED</span>`;
                 else badgeHtml = `<span class="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold text-[9px]">KERANJANG</span>`;
 
-                const proofAction = g.latestProof 
+                const proofAction = g.hasProof 
                     ? `<button onclick="viewGroupPaymentProof('${g.key.replace(/'/g, "\\'")}')" class="bg-indigo-600 text-white font-bold text-[9px] px-2 py-1 rounded">Lihat Bukti</button>`
                     : `<span class="text-slate-400 text-[9px] font-medium">-</span>`;
                 
-                const uInfo = userAccounts.find(u => u.username === g.username) || {};
+                const uInfo = userAccounts.find(u => u.username.toLowerCase() === g.username.toLowerCase()) || {};
                 const contactSub = uInfo.phone ? `<br><span class="text-[9px] text-slate-400 font-semibold">📞 ${uInfo.phone}</span>` : '';
 
                 return `
@@ -1063,11 +1095,11 @@
         }
 
         function viewOrderDetail(groupKey) {
-            const groupItems = ordersData.filter(o => `${o.username}||${o.date}` === groupKey);
+            const groupItems = ordersData.filter(o => `${o.username.toLowerCase()}||${o.date}` === groupKey.toLowerCase());
             if(groupItems.length === 0) return;
             
             const firstItem = groupItems[0];
-            const uInfo = userAccounts.find(u => u.username === firstItem.username) || {};
+            const uInfo = userAccounts.find(u => u.username.toLowerCase() === firstItem.username.toLowerCase()) || {};
             
             document.getElementById('detail-modal-subtitle').innerHTML = `
                 <span class="font-bold text-slate-800">${firstItem.username.toUpperCase()}</span> | 📞 ${uInfo.phone || '-'}<br>
@@ -1099,24 +1131,37 @@
 
         function closeOrderDetailModal() { document.getElementById('order-detail-modal').classList.add('hidden'); }
 
+        // --- BUKTI TRANSFER ADMIN VIEW (PER BRAND) ---
         function viewGroupPaymentProof(groupKey) {
-            const itemsWithProof = ordersData.filter(o => `${o.username}||${o.date}` === groupKey && o.paymentProof);
+            const itemsWithProof = ordersData.filter(o => `${o.username.toLowerCase()}||${o.date}` === groupKey.toLowerCase() && o.paymentProof);
             if (itemsWithProof.length > 0) {
-                const match = itemsWithProof[0];
-                const proofData = match.paymentProof;
+                const proofs = {};
+                itemsWithProof.forEach(item => {
+                    if (!proofs[item.brand]) proofs[item.brand] = item.paymentProof;
+                });
+
                 const container = document.getElementById('proof-modal-body');
+                let html = '';
                 
-                if (proofData.startsWith('data:image')) {
-                    container.innerHTML = `<img src="${proofData}" class="w-full h-auto object-contain rounded-md" alt="Bukti Transfer">`;
-                } else if (proofData.startsWith('data:application/pdf')) {
-                    container.innerHTML = `<iframe src="${proofData}" class="w-full h-[60vh] md:h-[65vh] rounded-md border border-slate-300"></iframe>`;
-                } else {
-                    container.innerHTML = `
-                        <div class="text-center py-6 md:py-10 space-y-4">
-                            <p class="text-xs font-bold text-slate-600">Dokumen File Khusus Terlampir.</p>
-                            <a href="${proofData}" download="Bukti_${match.username}" class="inline-block bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-xs shadow-md">📥 Download File</a>
-                        </div>`;
+                for (const [brand, proofData] of Object.entries(proofs)) {
+                    html += `<div class="mb-5 w-full">
+                                <h4 class="font-black text-[11px] uppercase mb-2 text-indigo-800 bg-indigo-50 py-1.5 px-3 rounded-lg border border-indigo-100 text-center shadow-sm">Bukti Transaksi Brand ${brand}</h4>`;
+                    
+                    if (proofData.startsWith('data:image')) {
+                        html += `<img src="${proofData}" class="w-full h-auto object-contain rounded-md border border-slate-200" alt="Bukti ${brand}">`;
+                    } else if (proofData.startsWith('data:application/pdf')) {
+                        html += `<iframe src="${proofData}" class="w-full h-[40vh] rounded-md border border-slate-300"></iframe>`;
+                    } else {
+                        html += `
+                            <div class="text-center py-6 space-y-3 border border-slate-200 rounded-md bg-white">
+                                <p class="text-xs font-bold text-slate-600">Dokumen Khusus Terlampir.</p>
+                                <a href="${proofData}" download="Bukti_${brand}_${groupKey.split('||')[0]}" class="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg text-[10px] uppercase tracking-wide shadow-md transition">📥 Download File ${brand}</a>
+                            </div>`;
+                    }
+                    html += `</div>`;
                 }
+                
+                container.innerHTML = html;
                 document.getElementById('proof-modal').classList.remove('hidden');
             } else {
                 showToast("Bukti transfer kosong.", true);
@@ -1124,7 +1169,6 @@
         }
         function closeProofModal() { document.getElementById('proof-modal').classList.add('hidden'); }
 
-        // --- TRANSAKSI FIREBASE: AMAN DARI RACE CONDITION KETIKA MENGHAPUS SESI ---
         function deleteOrderGroup(groupKey) {
             if(!confirm(`Hapus pesanan ini? (Stok otomatis dikembalikan).`)) return;
             
@@ -1133,14 +1177,14 @@
                 let cInv = data.jastip_inventory || [];
                 let cOrd = data.jastip_orders || [];
                 
-                const ordersToDelete = cOrd.filter(o => `${o.username}||${o.date}` === groupKey);
+                const ordersToDelete = cOrd.filter(o => `${o.username.toLowerCase()}||${o.date}` === groupKey.toLowerCase());
                 
                 ordersToDelete.forEach(order => {
                     const invItem = cInv.find(item => item.sku === order.sku);
                     if (invItem) invItem.stock += order.qty;
                 });
                 
-                cOrd = cOrd.filter(o => `${o.username}||${o.date}` !== groupKey);
+                cOrd = cOrd.filter(o => `${o.username.toLowerCase()}||${o.date}` !== groupKey.toLowerCase());
                 
                 db.ref('jastip_inventory').set(cInv);
                 db.ref('jastip_orders').set(cOrd);
@@ -1176,7 +1220,7 @@
                 ];
 
                 sorted.forEach((o, index) => {
-                    const profile = userAccounts.find(u => u.username === o.username) || {};
+                    const profile = userAccounts.find(u => u.username.toLowerCase() === o.username.toLowerCase()) || {};
                     const discP = o.grossPrice > 0 ? Math.round((o.discountCut / o.grossPrice) * 100) : 0;
                     
                     worksheet.addRow({
@@ -1273,7 +1317,7 @@
                 });
             }
 
-            const myActiveCartCount = ordersData.filter(o => o.username === currentUser && o.status === 'Cart').length;
+            const myActiveCartCount = ordersData.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart').length;
             const badge = document.getElementById('cart-badge');
             if(myActiveCartCount > 0) { badge.innerText = myActiveCartCount; badge.classList.remove('hidden'); }
             else { badge.classList.add('hidden'); }
@@ -1410,7 +1454,7 @@
                 const itemOrder = {
                     id: 'ord_' + Date.now() + Math.random().toString(36).substr(2, 4),
                     date: new Date().toLocaleString('id-ID'),
-                    username: currentUser,
+                    username: currentUser, 
                     sku: target.sku, brand: target.brand, product: target.product, variant: target.variant,
                     qty: requestedQty, grossPrice: singleGross * requestedQty, discountCut: singleCut * requestedQty, netPrice: singleNet * requestedQty,
                     status: 'Cart', expiryTime: null, paymentProof: null
@@ -1426,10 +1470,12 @@
             });
         }
 
-        // --- JASTIPER: KERANJANG & TAMPILAN REKENING PEMBAYARAN ---
+        // --- JASTIPER: KERANJANG & TAMPILAN REKENING PEMBAYARAN MULTI-UPLOAD ---
         function renderJastipCartAndPayment() {
             const body = document.getElementById('jastipCartItemsBody');
-            const myOrders = ordersData.filter(o => o.username === currentUser);
+            
+            // Case insensitive filter
+            const myOrders = ordersData.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase());
             
             if (myOrders.length === 0) {
                 body.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">Keranjang Anda kosong.</td></tr>`;
@@ -1472,7 +1518,7 @@
                 if (netSHI > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-rose-900 bg-rose-50/70 p-2 rounded-lg border border-rose-100"><span>Tagihan SHI:</span><span>Rp ${netSHI.toLocaleString('id-ID')}</span></div>`;
                 document.getElementById('splitTotalContainer').innerHTML = splitHtml;
 
-                // --- TAMPILKAN KARTU INFORMASI BANK ---
+                // --- TAMPILKAN KARTU INFORMASI BANK & INPUT FILE ---
                 const paymentContainer = document.getElementById('dynamicPaymentContainer');
                 let paymentHtml = '';
 
@@ -1497,6 +1543,12 @@
                                     <button onclick="navigator.clipboard.writeText('${bankData.accNumber}'); showToast('Nomor Rekening Disalin!')" class="text-[9px] font-bold bg-white border ${borderColor} ${textColor} px-2 py-1 rounded hover:bg-slate-50 shadow-sm transition">SALIN</button>
                                 </div>
                                 <p class="text-[10px] text-slate-500 font-semibold uppercase pt-1">A.N: ${bankData.accName}</p>
+                            </div>
+                            
+                            <!-- INPUT UPLOAD SPESIFIK BRAND -->
+                            <div class="mt-3 pt-3 border-t border-slate-100">
+                                <label class="block text-[9px] md:text-[10px] font-bold text-slate-600 uppercase mb-1">Lampirkan Bukti ${brand}:</label>
+                                <input type="file" id="receiptFileInput_${brand}" class="block w-full text-[9px] md:text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-2 file:rounded file:border-0 file:font-bold file:bg-slate-100 file:text-slate-700">
                             </div>
                         </div>`;
                 };
@@ -1526,7 +1578,7 @@
             }
         }
 
-        // --- TRANSAKSI FIREBASE: AMAN DARI RACE CONDITION KETIKA MENGKOSONGKAN KERANJANG ---
+        // --- TRANSAKSI FIREBASE: KOSONGKAN KERANJANG (HANYA CART & PENDING) ---
         function clearMyCart() {
             if(!confirm("Kosongkan keranjang? Stok akan dikembalikan.")) return;
             
@@ -1536,13 +1588,14 @@
                 let cOrd = data.jastip_orders || [];
                 
                 cOrd.forEach(o => {
-                    if((o.status === 'Cart' || o.status === 'Pending') && o.username === currentUser) {
+                    if((o.status === 'Cart' || o.status === 'Pending') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()) {
                         const invItem = cInv.find(i => i.sku === o.sku);
                         if(invItem) invItem.stock += o.qty;
                     }
                 });
                 
-                cOrd = cOrd.filter(o => o.username !== currentUser);
+                // Hanya hapus item status Cart atau Pending dari user ini. Riwayat Paid aman.
+                cOrd = cOrd.filter(o => !((o.status === 'Cart' || o.status === 'Pending') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()));
                 
                 db.ref('jastip_inventory').set(cInv);
                 db.ref('jastip_orders').set(cOrd);
@@ -1554,7 +1607,7 @@
         function processSelesaiCheckout() {
             db.ref('jastip_orders').once('value').then(s => {
                 let cOrd = s.val() || [];
-                const activeCart = cOrd.filter(o => o.username === currentUser && o.status === 'Cart');
+                const activeCart = cOrd.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart');
                 
                 if(activeCart.length === 0) return showToast("Keranjang kosong!", true);
 
@@ -1562,7 +1615,7 @@
                 const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
 
                 cOrd.forEach(order => {
-                    if(order.username === currentUser && order.status === 'Cart') {
+                    if(order.username && currentUser && order.username.toLowerCase() === currentUser.toLowerCase() && order.status === 'Cart') {
                         order.status = 'Pending';
                         order.expiryTime = limitTenMinutes;
                         order.date = unifiedCheckoutTime;
@@ -1570,7 +1623,7 @@
                 });
 
                 db.ref('jastip_orders').set(cOrd);
-                showToast("Checkout Sukses! Instruksi pembayaran aktif.");
+                showToast("Checkout Sukses! Lanjut ke Pembayaran.");
             });
         }
 
@@ -1591,14 +1644,35 @@
             activeTimerInterval = setInterval(updateBox, 1000);
         }
 
-        // --- TRANSAKSI FIREBASE: UPLOAD BUKTI BAYAR ---
+        // --- TRANSAKSI FIREBASE: UPLOAD BUKTI BAYAR MULTI-BRAND ---
         function submitReceiptPayment() {
-            const fileInput = document.getElementById('receiptFileInput');
-            if(!fileInput.files.length) return showToast("Wajib melampirkan bukti transfer!", true);
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Data = e.target.result;
+            const pendingOrders = ordersData.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Pending');
+            if(pendingOrders.length === 0) return showToast("Waktu pembayaran habis!", true);
+
+            // Identifikasi brand apa saja yang harus diupload buktinya
+            const pendingBrands = [...new Set(pendingOrders.map(o => o.brand))];
+            let filesToRead = [];
+
+            for (let brand of pendingBrands) {
+                const fileInput = document.getElementById(`receiptFileInput_${brand}`);
+                if (!fileInput || !fileInput.files.length) {
+                    return showToast(`Wajib melampirkan bukti transfer untuk brand ${brand}!`, true);
+                }
+                filesToRead.push({ brand: brand, file: fileInput.files[0] });
+            }
+
+            // Membaca semua file secara asinkronus menggunakan Promise
+            const readPromises = filesToRead.map(item => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        resolve({ brand: item.brand, base64: e.target.result });
+                    };
+                    reader.readAsDataURL(item.file);
+                });
+            });
+
+            Promise.all(readPromises).then(results => {
                 const finalUploadTime = new Date().toLocaleString('id-ID'); 
 
                 db.ref('jastip_orders').once('value').then(s => {
@@ -1606,26 +1680,27 @@
                     let hasPending = false;
 
                     cOrd.forEach(order => {
-                        if(order.username === currentUser && order.status === 'Pending') {
-                            order.status = 'Paid';
-                            order.paymentProof = base64Data;
-                            order.date = finalUploadTime; 
-                            hasPending = true;
+                        if(order.username && currentUser && order.username.toLowerCase() === currentUser.toLowerCase() && order.status === 'Pending') {
+                            const matchingProof = results.find(r => r.brand === order.brand);
+                            if (matchingProof) {
+                                order.status = 'Paid';
+                                order.paymentProof = matchingProof.base64;
+                                order.date = finalUploadTime; 
+                                hasPending = true;
+                            }
                         }
                     });
 
                     if(hasPending) {
                         db.ref('jastip_orders').set(cOrd).then(() => {
-                            showToast("Bukti Terkirim! Pembayaran Berhasil.");
-                            fileInput.value = "";
+                            showToast("Semua Bukti Terkirim! Pembayaran Berhasil.");
                             if(activeTimerInterval) clearInterval(activeTimerInterval);
                         });
                     } else {
                         showToast("Waktu pembayaran habis!", true);
                     }
                 });
-            };
-            reader.readAsDataURL(fileInput.files[0]);
+            });
         }
     </script>
 </body>
