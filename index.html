@@ -112,7 +112,7 @@
                     <button onclick="switchAdminTab('users')" id="tab-users" class="tab-btn">👥 Akun Jastiper</button>
                 </div>
 
-                <!-- Tab 1: Inventory & Photos -->
+                <!-- Tab 1: Inventory, Photos & Discount -->
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="card p-4 md:p-5 border-t-4 border-emerald-500 flex flex-col justify-between">
@@ -156,6 +156,30 @@
                         </div>
                     </div>
 
+                    <!-- Master Diskon Manager -->
+                    <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-r from-white to-amber-50/30">
+                        <h3 class="font-extrabold text-sm uppercase mb-1 flex items-center gap-2 text-amber-900">🏷️ Master Diskon Manager</h3>
+                        <p class="text-[10px] md:text-[11px] text-slate-500 mb-3 font-medium">Terapkan diskon secara massal. Hanya baju yang <strong>belum memiliki diskon</strong> yang akan tampil di bawah ini.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <select id="discountBrandFilter" onchange="updateDiscountProductDropdown()" class="input-field font-bold text-xs bg-white border-amber-200 focus:border-amber-500">
+                                <option value="ALL">Semua Brand</option>
+                                <option value="ZS">Brand: ZS</option>
+                                <option value="SHI">Brand: SHI</option>
+                            </select>
+                            <select id="discountProductSelect" class="input-field font-bold text-xs text-amber-800 bg-amber-50/50 border-amber-200 focus:border-amber-500">
+                                <option value="">-- Pilih Baju (Belum Ada Diskon) --</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <div class="relative w-full">
+                                    <input type="number" id="discountValueInput" placeholder="Nilai Diskon" min="0" max="100" class="input-field text-xs w-full font-bold border-amber-200 focus:border-amber-500 pr-8">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</span>
+                                </div>
+                                <button onclick="saveBulkDiscount()" class="bg-amber-600 text-white px-4 py-2 rounded-lg font-black text-xs uppercase hover:bg-amber-700 transition shadow whitespace-nowrap">Terapkan</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Inventory Table -->
                     <div class="card p-4 md:p-5">
                         <div class="flex flex-col md:flex-row justify-between gap-3 mb-4">
@@ -169,7 +193,9 @@
                             </div>
                             <div class="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
                                 <input type="text" id="searchInventory" oninput="onAdminFilterChange()" placeholder="Cari SKU / Baju..." class="input-field text-xs py-1.5 w-full md:w-48">
-                                <button onclick="deleteSelected()" class="bg-rose-500 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full md:w-auto">Hapus Terpilih</button>
+                                <!-- TOMBOL DOWNLOAD EXCEL DATA STOCK BARU -->
+                                <button onclick="downloadInventoryExcel()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full md:w-auto hover:bg-emerald-700 transition">📥 Download Excel</button>
+                                <button onclick="deleteSelected()" class="bg-rose-500 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full md:w-auto hover:bg-rose-600 transition">Hapus Terpilih</button>
                             </div>
                         </div>
                         <div class="table-container border border-slate-200">
@@ -179,7 +205,7 @@
                                         <th class="w-8 text-center"><input type="checkbox" id="checkAll" onchange="toggleCheckAll()"></th>
                                         <th>Kode SKU</th>
                                         <th>Brand</th>
-                                        <th>Nama Baju</th>
+                                        <th>Nama Baju (Klik Untuk Foto)</th>
                                         <th class="text-center">Variant</th>
                                         <th class="text-center">Stock</th>
                                         <th class="text-right">Harga Jual</th>
@@ -369,14 +395,25 @@
         </div>
     </div>
 
+    <!-- ADMIN PHOTO VIEW MODAL (TAMPILAN FOTO DI LIST DATA STOCK) -->
+    <div id="admin-photo-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
+        <div class="bg-white rounded-xl max-w-md w-full p-4 space-y-3">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-black text-xs md:text-sm uppercase tracking-wider text-indigo-950 truncate pr-2" id="admin-photo-title">Foto Produk</h3>
+                <button onclick="closeAdminPhotoModal()" class="text-slate-400 text-xl font-bold hover:text-rose-600 leading-none">&times;</button>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-lg flex items-center justify-center overflow-hidden w-full h-64 md:h-80">
+                <img id="admin-photo-img" src="" class="w-full h-full object-contain rounded-md" alt="Foto">
+            </div>
+        </div>
+    </div>
+
     <!-- JASTIPER ORDER MODAL (RESPONSIF HP) -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
         <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]">
-            <!-- Bagian Gambar Dibuat Lebih Pendek di HP -->
             <div class="w-full md:w-1/2 bg-slate-50 p-4 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
                 <img id="modal-img" class="w-full h-40 md:h-auto md:max-h-80 object-contain drop-shadow-md" src="" alt="Foto Baju">
             </div>
-            <!-- Bagian Konten Scrollable di HP -->
             <div class="w-full md:w-1/2 p-4 md:p-6 flex flex-col flex-grow overflow-y-auto">
                 <div class="flex justify-between items-start mb-3">
                     <div>
@@ -545,7 +582,6 @@
             if(!isDbLoaded || !currentUser) return;
             const now = Date.now();
             
-            // Cek lokal terlebih dahulu jika ada yang harus di-cancel berdasarkan username spesifik (case-insensitive)
             const needsCancel = ordersData.some(o => 
                 o.status === 'Pending' && 
                 o.expiryTime && 
@@ -587,6 +623,7 @@
                 renderAdminOrders();
                 renderAdminUsers();
                 updateMasterProductDropdown();
+                updateDiscountProductDropdown();
                 renderAdminBankInfo();
             } else {
                 renderJastipGrid();
@@ -769,8 +806,6 @@
 
                     db.ref('jastip_inventory').once('value').then(s => {
                         let inv = s.val() || [];
-                        inv = inv.filter(item => item.brand !== targetBrand);
-                        
                         newData.forEach(newItem => {
                             const existingIndex = inv.findIndex(oldItem => oldItem.sku === newItem.sku);
                             if(existingIndex >= 0) {
@@ -831,6 +866,7 @@
         function updateMasterProductDropdown() {
             const select = document.getElementById('masterProductSelect');
             const brandFilter = document.getElementById('masterBrandFilter').value;
+            const currentSelection = select.value;
             
             let filteredData = inventoryData;
             if (brandFilter !== 'ALL') {
@@ -840,9 +876,13 @@
             const uniqueProducts = [...new Set(filteredData.map(item => item.product))];
             const options = ['<option value="">-- Pilih Baju (Belum Ada Foto) --</option>'];
             uniqueProducts.forEach(p => {
-                if (!photoDatabase[p]) options.push(`<option value="${p}">${p}</option>`);
+                if (!photoDatabase[p]) options.push(`<option value="${p.replace(/"/g, '&quot;')}">${p}</option>`);
             });
             select.innerHTML = options.join('');
+            
+            if (uniqueProducts.includes(currentSelection) && !photoDatabase[currentSelection]) {
+                select.value = currentSelection;
+            }
         }
 
         function saveMasterPhoto() {
@@ -875,6 +915,79 @@
             window.scrollTo(0, 0);
         }
 
+        // TAMPILAN FOTO MODAL UNTUK ADMIN
+        function viewAdminPhoto(productName) {
+            if(photoDatabase[productName]) {
+                document.getElementById('admin-photo-title').innerText = productName;
+                document.getElementById('admin-photo-img').src = photoDatabase[productName];
+                document.getElementById('admin-photo-modal').classList.remove('hidden');
+            }
+        }
+
+        function closeAdminPhotoModal() {
+            document.getElementById('admin-photo-modal').classList.add('hidden');
+        }
+
+        // --- MASTER DISCOUNT MANAGER ---
+        function updateDiscountProductDropdown() {
+            const select = document.getElementById('discountProductSelect');
+            const brandFilter = document.getElementById('discountBrandFilter').value;
+            const currentSelection = select.value;
+            
+            // Filter untuk Master Diskon: HANYA tampilkan baju yang nilai diskonnya 0 atau kosong
+            let filteredData = inventoryData.filter(item => {
+                const hasNoDiscount = parseDiscountValue(item.discount) === 0;
+                const matchesBrand = (brandFilter === 'ALL' || item.brand === brandFilter);
+                return hasNoDiscount && matchesBrand;
+            });
+            
+            const uniqueProducts = [...new Set(filteredData.map(item => item.product))];
+            const options = ['<option value="">-- Pilih Baju (Belum Ada Diskon) --</option>'];
+            uniqueProducts.forEach(p => {
+                options.push(`<option value="${p.replace(/"/g, '&quot;')}">${p}</option>`);
+            });
+            select.innerHTML = options.join('');
+
+            // Pertahankan pilihan jika masih relevan
+            if (uniqueProducts.includes(currentSelection)) {
+                select.value = currentSelection;
+            }
+        }
+
+        function saveBulkDiscount() {
+            const targetProduct = document.getElementById('discountProductSelect').value;
+            const discValue = document.getElementById('discountValueInput').value.trim();
+            
+            if (!targetProduct) return showToast("Pilih nama baju terlebih dahulu!", true);
+            if (discValue === "") return showToast("Masukkan nilai diskon!", true);
+            
+            const numericDisc = parseFloat(discValue);
+            if (isNaN(numericDisc) || numericDisc < 0 || numericDisc > 100) {
+                return showToast("Nilai diskon harus antara 0 - 100!", true);
+            }
+
+            db.ref('jastip_inventory').once('value').then(s => {
+                let inv = s.val() || [];
+                let updatedCount = 0;
+                
+                inv.forEach(item => {
+                    if (item.product === targetProduct) {
+                        item.discount = numericDisc + '%';
+                        updatedCount++;
+                    }
+                });
+
+                if (updatedCount > 0) {
+                    db.ref('jastip_inventory').set(inv).then(() => {
+                        showToast(`Diskon ${numericDisc}% berhasil diterapkan ke ${updatedCount} variant baju!`);
+                        document.getElementById('discountValueInput').value = '';
+                    });
+                } else {
+                    showToast("Baju tidak ditemukan di database.", true);
+                }
+            });
+        }
+
         // --- INVENTORY GRID ---
         function onAdminFilterChange() { renderAdminInventory(); }
 
@@ -890,23 +1003,30 @@
 
             document.getElementById('checkAll').checked = false;
             if (filtered.length === 0) {
-                body.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-slate-400">Data tidak ditemukan.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-slate-400">Data tidak ditemukan.</td></tr>`;
                 return;
             }
 
             body.innerHTML = filtered.map(item => {
                 const discPercent = parseDiscountValue(item.discount);
+                const hasPhoto = !!photoDatabase[item.product];
+                
+                // Jika punya foto, buat tulisan biru yang bisa diklik. Jika tidak, tulisan abu-abu biasa.
+                const clickableProductName = hasPhoto 
+                    ? `<span onclick="viewAdminPhoto('${item.product.replace(/'/g, "\\'")}')" class="text-indigo-600 cursor-pointer hover:underline" title="Klik untuk lihat foto">${item.product}</span>` 
+                    : `<span class="text-slate-700" title="Belum ada foto">${item.product}</span>`;
+
                 return `
                     <tr class="hover:bg-slate-50 text-[10px] md:text-xs">
                         <td class="text-center"><input type="checkbox" class="row-check w-3 h-3" value="${item.id}"></td>
                         <td class="font-mono font-bold tracking-tight text-slate-600">${item.sku}</td>
                         <td class="font-bold text-indigo-700">${item.brand}</td>
-                        <td class="font-semibold truncate max-w-[120px] md:max-w-none" title="${item.product}">${item.product}</td>
+                        <td class="font-semibold truncate max-w-[120px] md:max-w-none">${clickableProductName}</td>
                         <td class="text-center"><span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">${item.variant}</span></td>
                         <td class="text-center font-bold">${item.stock}</td>
                         <td class="text-right font-bold">Rp ${item.price.toLocaleString('id-ID')}</td>
                         <td class="text-center text-rose-500 font-extrabold">${discPercent > 0 ? discPercent + '%' : '0%'}</td>
-                        <td class="text-center">${photoDatabase[item.product] ? '✅' : '❌'}</td>
+                        <td class="text-center">${hasPhoto ? '✅' : '❌'}</td>
                         <td class="text-center flex justify-center gap-1">
                             <button onclick="editPhoto('${item.product.replace(/'/g, "\\'")}')" class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[9px] font-bold">Edit</button>
                             <button onclick="deleteSingle('${item.id}')" class="bg-rose-50 text-rose-700 px-2 py-1 rounded text-[9px] font-bold">Hapus</button>
@@ -943,16 +1063,85 @@
             });
         }
 
-        function deleteAllFiltered() {
-            if(!confirm("Kosongkan daftar stock tampil?")) return;
+        // --- DOWNLOAD EXCEL DATA STOCK ---
+        async function downloadInventoryExcel() {
+            // Ambil filter saat ini
             const search = document.getElementById('searchInventory').value.toLowerCase();
             const brand = document.getElementById('adminBrandFilter').value;
             
-            db.ref('jastip_inventory').once('value').then(s => {
-                let inv = s.val() || [];
-                inv = inv.filter(item => !((item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) && (brand === "ALL" || item.brand === brand)));
-                db.ref('jastip_inventory').set(inv);
-            });
+            let filtered = inventoryData.filter(item => 
+                (item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) &&
+                (brand === "ALL" || item.brand === brand)
+            );
+
+            if (filtered.length === 0) return showToast("Tidak ada data untuk didownload!", true);
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('List Data Stock');
+
+                worksheet.columns = [
+                    { header: 'No.', key: 'no', width: 5 },
+                    { header: 'Kode SKU', key: 'sku', width: 15 },
+                    { header: 'Brand', key: 'brand', width: 10 },
+                    { header: 'Nama Baju', key: 'product', width: 35 },
+                    { header: 'Variant', key: 'variant', width: 12 },
+                    { header: 'Stock', key: 'stock', width: 10 },
+                    { header: 'Harga Modal (HPP)', key: 'hpp', width: 18 },
+                    { header: 'Harga Jual', key: 'price', width: 18 },
+                    { header: 'Diskon', key: 'discount', width: 12 },
+                    { header: 'Status Foto', key: 'photo', width: 15 }
+                ];
+
+                filtered.forEach((item, index) => {
+                    const discPercent = parseDiscountValue(item.discount);
+                    worksheet.addRow({
+                        no: index + 1,
+                        sku: item.sku,
+                        brand: item.brand,
+                        product: item.product,
+                        variant: item.variant,
+                        stock: item.stock,
+                        hpp: item.hpp || 0,
+                        price: item.price || 0,
+                        discount: discPercent + '%',
+                        photo: photoDatabase[item.product] ? 'Sudah Ada' : 'Belum Ada'
+                    });
+                });
+
+                // Style Header (Hijau)
+                const headerRow = worksheet.getRow(1);
+                headerRow.eachCell((cell) => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+                    cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
+
+                // Style Baris Data (Border & Format Uang)
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber > 1) {
+                        row.eachCell((cell, colNumber) => {
+                            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                            cell.alignment = { vertical: 'middle' };
+                            if ([7, 8].includes(colNumber)) cell.numFmt = '"Rp" #,##0'; // HPP dan Harga Jual di format Rupiah
+                        });
+                        row.getCell(1).alignment = { horizontal: 'center' };
+                        row.getCell(3).alignment = { horizontal: 'center' };
+                        row.getCell(5).alignment = { horizontal: 'center' };
+                        row.getCell(6).alignment = { horizontal: 'center' };
+                        row.getCell(9).alignment = { horizontal: 'center' };
+                        row.getCell(10).alignment = { horizontal: 'center' };
+                    }
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, "Rekap_Stock_Katalog.xlsx");
+                showToast("Data Stock berhasil didownload!");
+            } catch (error) {
+                showToast("Kesalahan membuat Excel.", true);
+            }
         }
 
         // --- ADMIN TABS & PENGATURAN REKENING BANK ---
@@ -1587,6 +1776,7 @@
                 let cInv = data.jastip_inventory || [];
                 let cOrd = data.jastip_orders || [];
                 
+                // Menemukan item yang akan dihapus berdasarkan case-insensitive
                 cOrd.forEach(o => {
                     if((o.status === 'Cart' || o.status === 'Pending') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()) {
                         const invItem = cInv.find(i => i.sku === o.sku);
@@ -1594,7 +1784,7 @@
                     }
                 });
                 
-                // Hanya hapus item status Cart atau Pending dari user ini. Riwayat Paid aman.
+                // Hapus item dari orders list
                 cOrd = cOrd.filter(o => !((o.status === 'Cart' || o.status === 'Pending') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()));
                 
                 db.ref('jastip_inventory').set(cInv);
@@ -1695,6 +1885,7 @@
                         db.ref('jastip_orders').set(cOrd).then(() => {
                             showToast("Semua Bukti Terkirim! Pembayaran Berhasil.");
                             if(activeTimerInterval) clearInterval(activeTimerInterval);
+                            renderAllViews();
                         });
                     } else {
                         showToast("Waktu pembayaran habis!", true);
