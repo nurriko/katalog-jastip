@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Katalog Jastip ZS & Shi - Enterprise System</title>
     
-    <!-- SheetJS untuk Fitur Upload Excel Katalog -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
-    <!-- ExcelJS & FileSaver untuk Fitur Download Rekapan Superadmin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-    <!-- FIREBASE SDK V8 COMPAT -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -59,13 +56,11 @@
 </head>
 <body class="bg-[#fcfdfe] text-slate-800">
 
-    <!-- Loading Database Overlay -->
     <div id="loading-overlay">
         <div class="loader"></div>
         <p class="text-sm font-bold text-slate-500 mt-4 text-center">Menghubungkan ke Database Cloud...</p>
     </div>
 
-    <!-- NAVIGATION -->
     <nav class="bg-indigo-950 text-white p-3 md:p-4 sticky top-0 z-50 shadow-md">
         <div class="container mx-auto flex justify-between items-center max-w-7xl">
             <div class="flex items-center gap-2 md:gap-3">
@@ -84,7 +79,6 @@
 
     <div class="container mx-auto p-3 md:p-4 max-w-7xl mb-10">
 
-        <!-- AUTHENTICATION VIEW -->
         <div id="auth-view" class="max-w-md mx-auto my-8 md:my-12 animate-fade-up px-2 md:px-0 hidden">
             <div class="card p-6 md:p-8 border-t-4 border-indigo-600">
                 <h2 id="auth-title" class="text-lg md:text-xl font-black text-center mb-6">LOGIN JASTIPER</h2>
@@ -101,10 +95,8 @@
             </div>
         </div>
 
-        <!-- MAIN DASHBOARD -->
         <div id="app-view" class="hidden animate-fade-up">
             
-            <!-- SUPER ADMIN VIEW -->
             <div id="admin-view" class="hidden">
                 <div class="flex gap-2 md:gap-4 border-b border-slate-200 mb-4 md:mb-6 overflow-x-auto hide-scrollbar pb-1">
                     <button onclick="switchAdminTab('inventory')" id="tab-inventory" class="tab-btn active">📦 Kelola Stock</button>
@@ -112,7 +104,6 @@
                     <button onclick="switchAdminTab('users')" id="tab-users" class="tab-btn">👥 Akun Jastiper</button>
                 </div>
 
-                <!-- Tab 1: Inventory, Photos & Discount -->
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="card p-4 md:p-5 border-t-4 border-emerald-500 flex flex-col justify-between">
@@ -156,7 +147,6 @@
                         </div>
                     </div>
 
-                    <!-- Master Diskon Manager -->
                     <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-r from-white to-amber-50/30">
                         <h3 class="font-extrabold text-sm uppercase mb-1 flex items-center gap-2 text-amber-900">🏷️ Master Diskon Manager</h3>
                         <p class="text-[10px] md:text-[11px] text-slate-500 mb-3 font-medium">Terapkan diskon massal. Hanya baju yang <strong>belum memiliki diskon</strong> yang akan tampil di sini.</p>
@@ -179,7 +169,6 @@
                             </div>
                         </div>
                         
-                        <!-- Panel Informasi Harga (Muncul otomatis saat baju dipilih) -->
                         <div id="discountPriceInfo" class="mt-3 hidden p-3 bg-white border border-amber-200 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm">
                             <div class="text-[10px] md:text-xs text-slate-500 font-bold uppercase mb-1 md:mb-0">
                                 💼 HPP (Harga Modal): <span id="infoHPP" class="font-black text-slate-800 ml-1 text-xs md:text-sm">Rp 0</span>
@@ -190,7 +179,6 @@
                         </div>
                     </div>
 
-                    <!-- Inventory Table -->
                     <div class="card p-4 md:p-5">
                         <div class="flex flex-col md:flex-row justify-between gap-3 mb-4">
                             <div class="flex items-center gap-2">
@@ -229,13 +217,10 @@
                     </div>
                 </div>
 
-                <!-- Tab 2: Orders Dashboard & Rekening Setup (Admin) -->
                 <div id="admin-tab-orders" class="hidden card p-4 md:p-5 space-y-4">
                     
-                    <!-- PENGATURAN REKENING PEMBAYARAN -->
                     <h3 class="font-black text-sm uppercase">⚙️ Pengaturan Rekening Pembayaran</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                        <!-- ZS Bank Info -->
                         <div class="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100 flex flex-col justify-between space-y-3">
                             <div>
                                 <h4 class="font-bold text-xs uppercase mb-3 text-indigo-900">Rekening - Brand ZS</h4>
@@ -246,7 +231,6 @@
                             <button onclick="saveBankInfo('ZS')" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white text-[10px] py-2.5 rounded font-bold uppercase shadow-sm transition">Simpan Rekening ZS</button>
                         </div>
                         
-                        <!-- SHI Bank Info -->
                         <div class="bg-rose-50/50 p-4 rounded-lg border border-rose-100 flex flex-col justify-between space-y-3">
                             <div>
                                 <h4 class="font-bold text-xs uppercase mb-3 text-rose-900">Rekening - Brand SHI</h4>
@@ -281,7 +265,6 @@
                     </div>
                 </div>
 
-                <!-- Tab 3: Users -->
                 <div id="admin-tab-users" class="hidden card p-4 md:p-5 space-y-4">
                     <h3 class="font-black text-sm uppercase">👥 Daftar Akun Jastiper</h3>
                     <div class="table-container border border-slate-200">
@@ -302,19 +285,16 @@
                 </div>
             </div>
 
-            <!-- JASTIPER VIEW -->
             <div id="jastip-view" class="hidden">
                 <div class="flex gap-2 md:gap-4 border-b border-slate-200 mb-4 overflow-x-auto hide-scrollbar pb-1">
                     <button onclick="switchJastipTab('catalog')" id="jastip-tab-catalog" class="tab-btn active">🛍️ Katalog Baju</button>
                     <button onclick="switchJastipTab('myorders')" id="jastip-tab-myorders" class="tab-btn">📦 Keranjang Checkout <span id="cart-badge" class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden ml-1">0</span></button>
                 </div>
 
-                <!-- Jastiper Sub-Tab 1: Catalog -->
                 <div id="jastip-panel-catalog" class="space-y-4">
                     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-3">
                         <h2 class="text-base md:text-lg font-black uppercase text-slate-800">Live Stock Catalog</h2>
                         
-                        <!-- Grid Input Responsif HP -->
                         <div class="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 md:gap-3 w-full">
                             <select id="jastipBrandFilter" onchange="renderJastipGrid()" class="input-field py-1.5 text-[10px] md:text-xs font-bold w-full md:w-36 bg-slate-50">
                                 <option value="ALL">Semua Brand</option>
@@ -331,18 +311,17 @@
                         </div>
                     </div>
                     
-                    <!-- Grid Responsive Catalog -->
                     <div id="jastipGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"></div>
                 </div>
 
-                <!-- Jastiper Sub-Tab 2: My Orders & Bank Gateway -->
                 <div id="jastip-panel-myorders" class="hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="card p-4 md:p-5 lg:col-span-2 space-y-4">
                             <div class="flex justify-between items-center">
                                 <h3 class="font-black text-sm uppercase text-slate-700">🛒 Keranjang Saya</h3>
-                                <button onclick="clearMyCart()" class="text-rose-600 hover:text-rose-800 text-[10px] md:text-[11px] font-bold uppercase px-2">🗑️ Kosongkan</button>
+                                <button onclick="clearMyCart()" class="text-rose-600 hover:text-rose-800 text-[10px] md:text-[11px] font-bold uppercase px-2 bg-rose-50 py-1 rounded">🗑️ Kosongkan Keranjang</button>
                             </div>
+                            
                             <div class="table-container border border-slate-200">
                                 <table>
                                     <thead>
@@ -353,6 +332,8 @@
                                             <th class="text-right">Harga Asli</th>
                                             <th class="text-center">Diskon</th>
                                             <th class="text-right">Harga Net</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody id="jastipCartItemsBody"></tbody>
@@ -361,7 +342,7 @@
                             
                             <div id="jastipSummaryBox" class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2 hidden">
                                 <div class="flex justify-between text-xs font-semibold text-slate-500">
-                                    <span>Nominal Normal:</span>
+                                    <span>Nominal Normal (Hanya Item Aktif):</span>
                                     <span id="sumGrossPrice">Rp 0</span>
                                 </div>
                                 <div class="flex justify-between text-xs font-bold text-rose-600">
@@ -374,7 +355,6 @@
                                     <span id="sumNetPrice">Rp 0</span>
                                 </div>
                                 
-                                <!-- Container Split Tagihan Per Brand -->
                                 <div id="splitTotalContainer" class="space-y-1 pt-2 border-t border-slate-200 mt-2"></div>
 
                                 <div class="pt-3" id="actionCheckoutRow">
@@ -383,18 +363,15 @@
                             </div>
                         </div>
 
-                        <!-- Panel Rekening Pembayaran -->
-                        <div id="qrisGatewayPanel" class="card p-4 md:p-5 border-t-4 border-amber-500 space-y-4 hidden">
+                        <div id="qrisGatewayPanel" class="card p-4 md:p-5 border-t-4 border-amber-500 space-y-4 hidden h-fit">
                             <div class="text-center bg-amber-50 p-3 rounded-lg border border-amber-200">
                                 <h4 class="text-xs font-black text-amber-800 uppercase tracking-wide">⚠️ Batas Waktu Bayar</h4>
                                 <div id="countdownTimerBox" class="text-2xl font-black text-rose-600 mt-1 tracking-widest">10:00</div>
-                                <p class="text-[9px] md:text-[10px] text-slate-500 font-medium mt-0.5">Sistem membatalkan otomatis jika waktu habis!</p>
+                                <p class="text-[9px] md:text-[10px] text-slate-500 font-medium mt-0.5">Pesanan dibatalkan otomatis & stok kembali jika waktu habis!</p>
                             </div>
 
-                            <!-- Dynamic Bank Details Container -->
                             <div id="dynamicPaymentContainer" class="flex flex-col gap-4 justify-center items-center w-full">
-                                <!-- Info Rekening akan di-inject disini melalui Javascript -->
-                            </div>
+                                </div>
 
                             <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-lg text-xs uppercase transition shadow mt-2">Kirim Bukti Valid</button>
                         </div>
@@ -404,7 +381,6 @@
         </div>
     </div>
 
-    <!-- ADMIN PHOTO VIEW MODAL (TAMPILAN FOTO DI LIST DATA STOCK) -->
     <div id="admin-photo-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-xl max-w-md w-full p-4 space-y-3">
             <div class="flex justify-between items-center border-b pb-2">
@@ -417,14 +393,11 @@
         </div>
     </div>
 
-    <!-- JASTIPER ORDER MODAL (RESPONSIF HP) -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
         <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]">
-            <!-- Bagian Gambar Dibuat Lebih Pendek di HP -->
             <div class="w-full md:w-1/2 bg-slate-50 p-4 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
                 <img id="modal-img" class="w-full h-40 md:h-auto md:max-h-80 object-contain drop-shadow-md" src="" alt="Foto Baju">
             </div>
-            <!-- Bagian Konten Scrollable di HP -->
             <div class="w-full md:w-1/2 p-4 md:p-6 flex flex-col flex-grow overflow-y-auto">
                 <div class="flex justify-between items-start mb-3">
                     <div>
@@ -465,7 +438,6 @@
         </div>
     </div>
 
-    <!-- ORDER DETAIL MODAL FOR ADMIN -->
     <div id="order-detail-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-xl max-w-4xl w-full p-4 md:p-6 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-start border-b pb-3 mb-3">
@@ -501,7 +473,6 @@
         </div>
     </div>
 
-    <!-- ADMIN PROOF IMAGE VIEW MODAL -->
     <div id="proof-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-xl max-w-xl w-full p-4 space-y-3">
             <div class="flex justify-between items-center border-b pb-2">
@@ -581,19 +552,11 @@
             console.error("FIREBASE ERROR:", error);
         });
 
-        // Helper Fungsi untuk Save ke Firebase
-        function saveUsers() { db.ref('jastip_users').set(userAccounts); }
-        function saveInventory() { db.ref('jastip_inventory').set(inventoryData); }
-        function savePhotos() { db.ref('jastip_photos').set(photoDatabase); }
-        function saveOrders() { db.ref('jastip_orders').set(ordersData); }
-        function saveBankDB() { db.ref('jastip_bank').set(bankDatabase); }
-
         // Interval Pengecekan Timer Auto Cancel
         setInterval(() => {
             if(!isDbLoaded || !currentUser) return;
             const now = Date.now();
             
-            // Cek lokal terlebih dahulu jika ada yang harus di-cancel berdasarkan username spesifik (case-insensitive)
             const needsCancel = ordersData.some(o => 
                 o.status === 'Pending' && 
                 o.expiryTime && 
@@ -622,6 +585,7 @@
                     if (changed) {
                         db.ref('jastip_inventory').set(cInv);
                         db.ref('jastip_orders').set(cOrd);
+                        showToast("Waktu pembayaran habis, pesanan dibatalkan otomatis.", true);
                     }
                 });
             }
@@ -629,7 +593,6 @@
 
         function renderAllViews() {
             if (!currentUser) return;
-            // Evaluasi admin (Case-insensitive)
             if (Object.keys(superAdmins).map(k => k.toLowerCase()).includes(currentUser.toLowerCase())) {
                 renderAdminInventory();
                 renderAdminOrders();
@@ -695,20 +658,18 @@
             const p = document.getElementById('password').value.trim();
             if(!rawU || !p) return showToast("Isi data lengkap!", true);
             
-            const u = rawU.toLowerCase(); // Ubah ke huruf kecil untuk pencocokan
+            const u = rawU.toLowerCase(); 
 
             if (isLoginMode) {
-                // Cek Admin (Case Insensitive)
                 const adminKey = Object.keys(superAdmins).find(k => k.toLowerCase() === u);
                 if (adminKey && superAdmins[adminKey] === p) {
                     loginSuccess(adminKey, true);
                     return;
                 }
                 
-                // Cek Jastiper (Case Insensitive)
                 const user = userAccounts.find(x => x.username.toLowerCase() === u && x.password === p);
                 if (user) {
-                    loginSuccess(user.username, false); // Memakai huruf asli saat mereka daftar
+                    loginSuccess(user.username, false); 
                 } else {
                     showToast("Akun tidak ditemukan atau password salah!", true);
                 }
@@ -718,18 +679,16 @@
                 
                 if(!phone || !address) return showToast("Nomor telepon dan alamat wajib diisi!", true);
                 
-                // Cek apakah username sudah ada (Case Insensitive)
                 if (Object.keys(superAdmins).find(k => k.toLowerCase() === u) || userAccounts.find(x => x.username.toLowerCase() === u)) {
                     return showToast("Username telah terpakai!", true);
                 }
                 
                 db.ref('jastip_users').once('value').then(s => {
                     let arr = s.val() || [];
-                    // Cek ganda di dalam janji Firebase
                     if (arr.find(x => x.username.toLowerCase() === u)) {
                          return showToast("Username telah terpakai!", true);
                     }
-                    arr.push({username: rawU, password: p, phone: phone, address: address}); // Menyimpan teks asli
+                    arr.push({username: rawU, password: p, phone: phone, address: address}); 
                     db.ref('jastip_users').set(arr).then(() => {
                         showToast("Daftar Akun Berhasil!");
                         toggleAuthMode();
@@ -963,10 +922,9 @@
                 select.value = currentSelection;
             }
 
-            onDiscountProductChange(); // Refresh kotak info harga saat list diupdate
+            onDiscountProductChange(); 
         }
 
-        // FUNGSI BARU: MENAMPILKAN HPP DAN HARGA JUAL SAAT NAMA BAJU DIPILIH
         function onDiscountProductChange() {
             const selectedProduct = document.getElementById('discountProductSelect').value;
             const infoBox = document.getElementById('discountPriceInfo');
@@ -1013,7 +971,7 @@
                     db.ref('jastip_inventory').set(inv).then(() => {
                         showToast(`Diskon ${numericDisc}% berhasil diterapkan ke ${updatedCount} variant baju!`);
                         document.getElementById('discountValueInput').value = '';
-                        onDiscountProductChange(); // Sembunyikan kembali kotak info harga
+                        onDiscountProductChange(); 
                     });
                 } else {
                     showToast("Baju tidak ditemukan di database.", true);
@@ -1055,17 +1013,39 @@
                         <td class="font-bold text-indigo-700">${item.brand}</td>
                         <td class="font-semibold truncate max-w-[120px] md:max-w-none">${clickableProductName}</td>
                         <td class="text-center"><span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">${item.variant}</span></td>
-                        <td class="text-center font-bold">${item.stock}</td>
+                        <td class="text-center font-bold text-emerald-600">${item.stock}</td>
                         <td class="text-right font-bold">Rp ${item.price.toLocaleString('id-ID')}</td>
                         <td class="text-center text-rose-500 font-extrabold">${discPercent > 0 ? discPercent + '%' : '0%'}</td>
                         <td class="text-center">${hasPhoto ? '✅' : '❌'}</td>
                         <td class="text-center flex justify-center gap-1">
-                            <button onclick="editPhoto('${item.product.replace(/'/g, "\\'")}')" class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[9px] font-bold">Edit</button>
-                            <button onclick="deleteSingle('${item.id}')" class="bg-rose-50 text-rose-700 px-2 py-1 rounded text-[9px] font-bold">Hapus</button>
+                            <button onclick="editAdminStock('${item.id}')" class="bg-amber-50 text-amber-700 px-2 py-1 rounded text-[9px] font-bold shadow-sm border border-amber-200">Stok</button>
+                            <button onclick="editPhoto('${item.product.replace(/'/g, "\\'")}')" class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[9px] font-bold shadow-sm border border-indigo-200">Foto</button>
+                            <button onclick="deleteSingle('${item.id}')" class="bg-rose-50 text-rose-700 px-2 py-1 rounded text-[9px] font-bold shadow-sm border border-rose-200">Hapus</button>
                         </td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        function editAdminStock(id) {
+            db.ref('jastip_inventory').once('value').then(s => {
+                let inv = s.val() || [];
+                const itemIndex = inv.findIndex(i => i.id === id);
+                if (itemIndex < 0) return showToast("Item tidak ditemukan di database!", true);
+                
+                const item = inv[itemIndex];
+                const newStockStr = prompt(`Edit Stok Manual untuk:\n${item.product} (Varian: ${item.variant})\n\nMasukkan Jumlah Stok Terbaru:`, item.stock);
+                
+                if (newStockStr === null) return; 
+                
+                const newStock = parseInt(newStockStr);
+                if (isNaN(newStock) || newStock < 0) return showToast("Jumlah stok harus berupa angka minimal 0!", true);
+                
+                inv[itemIndex].stock = newStock;
+                db.ref('jastip_inventory').set(inv).then(() => {
+                    showToast(`Stok ${item.product} (${item.variant}) berhasil diperbarui menjadi ${newStock}!`);
+                });
+            });
         }
 
         function toggleCheckAll() {
@@ -1388,7 +1368,7 @@
         function closeProofModal() { document.getElementById('proof-modal').classList.add('hidden'); }
 
         function deleteOrderGroup(groupKey) {
-            if(!confirm(`Hapus pesanan ini? (Stok otomatis dikembalikan).`)) return;
+            if(!confirm(`Hapus histori pesanan ini?`)) return;
             
             db.ref('/').once('value').then(s => {
                 let data = s.val() || {};
@@ -1398,15 +1378,19 @@
                 const ordersToDelete = cOrd.filter(o => `${o.username.toLowerCase()}||${o.date}` === groupKey.toLowerCase());
                 
                 ordersToDelete.forEach(order => {
-                    const invItem = cInv.find(item => item.sku === order.sku);
-                    if (invItem) invItem.stock += order.qty;
+                    // Perbaikan BUG: Hanya kembalikan stok JIKA statusnya belum Dibatalkan (Cancelled)
+                    // Karena jika sudah Cancelled, stoknya sudah otomatis kembali sebelumnya.
+                    if (order.status !== 'Cancelled') {
+                        const invItem = cInv.find(item => item.sku === order.sku);
+                        if (invItem) invItem.stock += order.qty;
+                    }
                 });
                 
                 cOrd = cOrd.filter(o => `${o.username.toLowerCase()}||${o.date}` !== groupKey.toLowerCase());
                 
                 db.ref('jastip_inventory').set(cInv);
                 db.ref('jastip_orders').set(cOrd);
-                showToast(`Sesi dihapus, stok dikembalikan!`);
+                showToast(`Data sesi berhasil dihapus!`);
             });
         }
 
@@ -1647,7 +1631,6 @@
             const requestedQty = parseInt(qtyInput.value) || 1;
             if(requestedQty < 1) return showToast("Jumlah tidak valid!", true);
             
-            // Tarik data terbaru tepat detik ini dari database sebelum mengurangi stok
             db.ref('/').once('value').then(snap => {
                 let data = snap.val() || {};
                 let cInv = data.jastip_inventory || [];
@@ -1660,7 +1643,6 @@
                     return;
                 }
 
-                // Kurangi stok di Cloud
                 cInv[targetIndex].stock -= requestedQty;
 
                 const target = cInv[targetIndex];
@@ -1688,31 +1670,131 @@
             });
         }
 
-        // --- JASTIPER: KERANJANG & TAMPILAN REKENING PEMBAYARAN MULTI-UPLOAD ---
+        // --- NEW/MODIFIED: FITUR EDIT CART ---
+        function editCartItemQty(orderId) {
+            const newQtyStr = prompt("Masukkan jumlah (Qty) baru untuk pesanan ini:");
+            if(newQtyStr === null) return;
+            const newQty = parseInt(newQtyStr);
+            if(isNaN(newQty) || newQty < 1) return showToast("Jumlah tidak valid!", true);
+
+            db.ref('/').once('value').then(s => {
+                let data = s.val() || {};
+                let cInv = data.jastip_inventory || [];
+                let cOrd = data.jastip_orders || [];
+
+                const oIndex = cOrd.findIndex(o => o.id === orderId);
+                if(oIndex < 0) return;
+
+                const order = cOrd[oIndex];
+                const iIndex = cInv.findIndex(i => i.sku === order.sku);
+                
+                if(iIndex < 0) return showToast("Data barang tidak ditemukan di sistem!", true);
+
+                const item = cInv[iIndex];
+                const diff = newQty - order.qty;
+
+                if(diff > 0 && item.stock < diff) {
+                    return showToast(`Gagal! Sisa stok baju tersebut hanya: ${item.stock} Pcs`, true);
+                }
+
+                item.stock -= diff;
+                
+                order.qty = newQty;
+                const discPercent = parseDiscountValue(item.discount);
+                const singleGross = item.price;
+                const singleCut = (singleGross * discPercent) / 100;
+                const singleNet = singleGross - singleCut;
+
+                order.grossPrice = singleGross * newQty;
+                order.discountCut = singleCut * newQty;
+                order.netPrice = singleNet * newQty;
+
+                db.ref('jastip_inventory').set(cInv);
+                db.ref('jastip_orders').set(cOrd);
+                showToast("Jumlah baju pesanan berhasil diupdate!");
+            });
+        }
+
+        // --- NEW/MODIFIED: FITUR HAPUS SINGLE CART ---
+        function deleteCartItem(orderId) {
+            if(!confirm("Yakin hapus item ini dari keranjang? (Stok akan dikembalikan)")) return;
+            db.ref('/').once('value').then(s => {
+                let data = s.val() || {};
+                let cInv = data.jastip_inventory || [];
+                let cOrd = data.jastip_orders || [];
+
+                const oIndex = cOrd.findIndex(o => o.id === orderId);
+                if (oIndex > -1) {
+                    const order = cOrd[oIndex];
+                    const iIndex = cInv.findIndex(i => i.sku === order.sku);
+                    if (iIndex > -1) {
+                        cInv[iIndex].stock += order.qty; 
+                    }
+                    cOrd.splice(oIndex, 1); 
+                    db.ref('jastip_inventory').set(cInv);
+                    db.ref('jastip_orders').set(cOrd);
+                    showToast("Baju berhasil dihapus dari keranjang!");
+                }
+            });
+        }
+
+        // --- MODIFIED: RENDER KERANJANG JASTIPER ---
         function renderJastipCartAndPayment() {
             const body = document.getElementById('jastipCartItemsBody');
             
-            // Case insensitive filter
             const myOrders = ordersData.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase());
             
             if (myOrders.length === 0) {
-                body.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">Keranjang Anda kosong.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">Keranjang dan Histori Anda kosong.</td></tr>`;
                 document.getElementById('jastipSummaryBox').classList.add('hidden');
                 document.getElementById('qrisGatewayPanel').classList.add('hidden');
                 return;
             }
 
-            body.innerHTML = myOrders.map(o => {
+            const sortedOrders = myOrders.sort((a, b) => {
+                const weights = { 'Cart': 1, 'Pending': 2, 'Paid': 3, 'Cancelled': 4 };
+                return (weights[a.status] || 5) - (weights[b.status] || 5);
+            });
+
+            body.innerHTML = sortedOrders.map(o => {
                 const matchedInv = inventoryData.find(i => i.sku === o.sku);
                 const currentDiscPercent = matchedInv ? parseDiscountValue(matchedInv.discount) : 0;
+                
+                let statusBadgeHtml = '';
+                let isInactive = false;
+                if(o.status === 'Cart') statusBadgeHtml = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase shadow-sm">Di Keranjang</span>`;
+                else if(o.status === 'Pending') statusBadgeHtml = `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase shadow-sm">Tunggu Bayar</span>`;
+                else if(o.status === 'Cancelled') {
+                    statusBadgeHtml = `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase shadow-sm">Dibatalkan</span>`;
+                    isInactive = true;
+                }
+                else if(o.status === 'Paid') {
+                    statusBadgeHtml = `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase shadow-sm">Sukses</span>`;
+                    isInactive = true;
+                }
+
+                let actionBtns = `<span class="text-slate-300">-</span>`;
+                if(o.status === 'Cart') {
+                    actionBtns = `
+                        <div class="flex flex-col gap-1 items-center">
+                            <button onclick="editCartItemQty('${o.id}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-[8px] md:text-[9px] font-bold w-full max-w-[60px] border border-indigo-200">EDIT QTY</button>
+                            <button onclick="deleteCartItem('${o.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded text-[8px] md:text-[9px] font-bold w-full max-w-[60px] border border-rose-200">HAPUS</button>
+                        </div>
+                    `;
+                } else if(o.status === 'Pending') {
+                    actionBtns = `<span class="text-[8px] font-bold text-amber-500 uppercase">Terkunci</span>`;
+                }
+
                 return `
-                    <tr class="text-[10px] md:text-xs hover:bg-slate-50/50">
+                    <tr class="text-[10px] md:text-xs hover:bg-slate-50/50 ${isInactive ? 'opacity-50 grayscale-[50%]' : ''}">
                         <td class="text-center font-black">${o.qty}</td>
-                        <td class="whitespace-nowrap"><span class="text-[8px] font-black uppercase text-indigo-700 bg-indigo-50 px-1 rounded">${o.brand}</span> <span class="font-semibold block truncate max-w-[120px] md:max-w-[200px]" title="${o.product}">${o.product}</span></td>
+                        <td class="whitespace-nowrap"><span class="text-[8px] font-black uppercase text-indigo-700 bg-indigo-50 px-1 rounded">${o.brand}</span> <span class="font-semibold block truncate max-w-[120px] md:max-w-[180px]" title="${o.product}">${o.product}</span></td>
                         <td class="text-center font-bold">${o.variant}</td>
                         <td class="text-right text-slate-400">Rp ${o.grossPrice.toLocaleString('id-ID')}</td>
                         <td class="text-center text-rose-500 font-bold">${currentDiscPercent}%</td>
                         <td class="text-right font-black text-indigo-950">Rp ${o.netPrice.toLocaleString('id-ID')}</td>
+                        <td class="text-center">${statusBadgeHtml}</td>
+                        <td class="text-center">${actionBtns}</td>
                     </tr>
                 `;
             }).join('');
@@ -1736,7 +1818,6 @@
                 if (netSHI > 0) splitHtml += `<div class="flex justify-between items-center text-[10px] md:text-xs font-bold text-rose-900 bg-rose-50/70 p-2 rounded-lg border border-rose-100"><span>Tagihan SHI:</span><span>Rp ${netSHI.toLocaleString('id-ID')}</span></div>`;
                 document.getElementById('splitTotalContainer').innerHTML = splitHtml;
 
-                // --- TAMPILKAN KARTU INFORMASI BANK & INPUT FILE ---
                 const paymentContainer = document.getElementById('dynamicPaymentContainer');
                 let paymentHtml = '';
 
@@ -1763,7 +1844,6 @@
                                 <p class="text-[10px] text-slate-500 font-semibold uppercase pt-1">A.N: ${bankData.accName}</p>
                             </div>
                             
-                            <!-- INPUT UPLOAD SPESIFIK BRAND -->
                             <div class="mt-3 pt-3 border-t border-slate-100">
                                 <label class="block text-[9px] md:text-[10px] font-bold text-slate-600 uppercase mb-1">Lampirkan Bukti ${brand}:</label>
                                 <input type="file" id="receiptFileInput_${brand}" class="block w-full text-[9px] md:text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-2 file:rounded file:border-0 file:font-bold file:bg-slate-100 file:text-slate-700">
@@ -1796,7 +1876,7 @@
             }
         }
 
-        // --- TRANSAKSI FIREBASE: KOSONGKAN KERANJANG (HANYA CART & PENDING) ---
+        // --- TRANSAKSI FIREBASE: KOSONGKAN KERANJANG (HANYA CART) ---
         function clearMyCart() {
             if(!confirm("Kosongkan keranjang? Stok akan dikembalikan.")) return;
             
@@ -1805,16 +1885,14 @@
                 let cInv = data.jastip_inventory || [];
                 let cOrd = data.jastip_orders || [];
                 
-                // Menemukan item yang akan dihapus berdasarkan case-insensitive
                 cOrd.forEach(o => {
-                    if((o.status === 'Cart' || o.status === 'Pending') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()) {
+                    if((o.status === 'Cart') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()) {
                         const invItem = cInv.find(i => i.sku === o.sku);
                         if(invItem) invItem.stock += o.qty;
                     }
                 });
                 
-                // Hapus item dari orders list
-                cOrd = cOrd.filter(o => !((o.status === 'Cart' || o.status === 'Pending') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()));
+                cOrd = cOrd.filter(o => !((o.status === 'Cart') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()));
                 
                 db.ref('jastip_inventory').set(cInv);
                 db.ref('jastip_orders').set(cOrd);
@@ -1868,7 +1946,6 @@
             const pendingOrders = ordersData.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Pending');
             if(pendingOrders.length === 0) return showToast("Waktu pembayaran habis!", true);
 
-            // Identifikasi brand apa saja yang harus diupload buktinya
             const pendingBrands = [...new Set(pendingOrders.map(o => o.brand))];
             let filesToRead = [];
 
@@ -1880,7 +1957,6 @@
                 filesToRead.push({ brand: brand, file: fileInput.files[0] });
             }
 
-            // Membaca semua file secara asinkronus menggunakan Promise
             const readPromises = filesToRead.map(item => {
                 return new Promise((resolve) => {
                     const reader = new FileReader();
