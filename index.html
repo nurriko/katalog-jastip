@@ -193,18 +193,30 @@
                     <!-- Inventory Table -->
                     <div class="card p-4 md:p-5">
                         <div class="flex flex-col md:flex-row justify-between gap-3 mb-4">
-                            <div class="flex items-center gap-2">
-                                <h3 class="font-black text-sm uppercase">📦 List Data Stock</h3>
-                                <select id="adminBrandFilter" onchange="onAdminFilterChange()" class="input-field py-1.5 px-2 text-xs font-bold w-28 bg-slate-50">
+                            <div class="flex flex-wrap lg:flex-nowrap items-center gap-2 w-full">
+                                <h3 class="font-black text-sm uppercase hidden lg:block mr-2">📦 List Data Stock</h3>
+                                
+                                <select id="adminBrandFilter" onchange="onAdminFilterChange()" class="input-field py-1.5 px-2 text-xs font-bold w-full lg:w-28 bg-slate-50">
                                     <option value="ALL">All Brand</option>
                                     <option value="ZS">ZS Saja</option>
                                     <option value="SHI">SHI Saja</option>
                                 </select>
-                            </div>
-                            <div class="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
-                                <input type="text" id="searchInventory" oninput="onAdminFilterChange()" placeholder="Cari SKU / Baju..." class="input-field text-xs py-1.5 w-full md:w-48">
-                                <button onclick="downloadInventoryExcel()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full md:w-auto hover:bg-emerald-700 transition">📥 Download Excel</button>
-                                <button onclick="deleteSelected()" class="bg-rose-500 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full md:w-auto hover:bg-rose-600 transition">Hapus Terpilih</button>
+
+                                <!-- DROPDOWN FILTER URUTAN ADMIN -->
+                                <select id="adminSortFilter" onchange="onAdminFilterChange()" class="input-field py-1.5 px-2 text-xs font-bold w-full lg:w-40 bg-slate-50">
+                                    <option value="">Urutan Default</option>
+                                    <option value="AZ">Abjad (A - Z)</option>
+                                    <option value="ZA">Abjad (Z - A)</option>
+                                    <option value="STOCK_DESC">Stok Terbanyak</option>
+                                    <option value="STOCK_ASC">Stok Paling Sedikit</option>
+                                    <option value="PRICE_DESC">Harga Termahal</option>
+                                    <option value="PRICE_ASC">Harga Termurah</option>
+                                </select>
+                                
+                                <input type="text" id="searchInventory" oninput="onAdminFilterChange()" placeholder="Cari SKU / Baju..." class="input-field text-xs py-1.5 w-full lg:w-48">
+                                
+                                <button onclick="downloadInventoryExcel()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full lg:w-auto hover:bg-emerald-700 transition whitespace-nowrap">📥 Download Excel</button>
+                                <button onclick="deleteSelected()" class="bg-rose-500 text-white px-3 py-1.5 rounded text-[10px] font-bold shadow w-full lg:w-auto hover:bg-rose-600 transition whitespace-nowrap">Hapus Terpilih</button>
                             </div>
                         </div>
                         <div class="table-container border border-slate-200">
@@ -315,19 +327,29 @@
                         <h2 class="text-base md:text-lg font-black uppercase text-slate-800">Live Stock Catalog</h2>
                         
                         <!-- Grid Input Responsif HP -->
-                        <div class="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 md:gap-3 w-full">
-                            <select id="jastipBrandFilter" onchange="renderJastipGrid()" class="input-field py-1.5 text-[10px] md:text-xs font-bold w-full md:w-36 bg-slate-50">
+                        <div class="grid grid-cols-2 lg:flex lg:flex-wrap items-center gap-2 md:gap-3 w-full">
+                            <select id="jastipBrandFilter" onchange="renderJastipGrid()" class="input-field py-1.5 text-[10px] md:text-xs font-bold w-full lg:w-32 bg-slate-50">
                                 <option value="ALL">Semua Brand</option>
                                 <option value="ZS">Zaskia Sungkar</option>
                                 <option value="SHI">Shi by Shireen</option>
                             </select>
-                            <select id="jastipDiscountFilter" onchange="renderJastipGrid()" class="col-span-1 input-field py-1.5 text-[10px] md:text-xs font-bold w-full md:w-36 bg-slate-50">
+                            <select id="jastipDiscountFilter" onchange="renderJastipGrid()" class="input-field py-1.5 text-[10px] md:text-xs font-bold w-full lg:w-36 bg-slate-50">
                                 <option value="ALL">Semua Diskon</option>
                                 <option value="10-30">Diskon 10% - 30%</option>
                                 <option value="40-50">Diskon 40% - 50%</option>
                                 <option value=">50">Diskon > 50%</option>
                             </select>
-                            <input type="text" id="searchKatalog" oninput="renderJastipGrid()" placeholder="Cari baju..." class="col-span-2 md:col-span-1 input-field py-1.5 text-xs w-full md:w-48">
+                            
+                            <!-- DROPDOWN FILTER URUTAN JASTIPER -->
+                            <select id="jastipSortFilter" onchange="renderJastipGrid()" class="col-span-2 lg:col-span-1 input-field py-1.5 text-[10px] md:text-xs font-bold w-full lg:w-40 bg-slate-50">
+                                <option value="">Urutan Default</option>
+                                <option value="AZ">Abjad (A - Z)</option>
+                                <option value="ZA">Abjad (Z - A)</option>
+                                <option value="PRICE_DESC">Harga Termahal</option>
+                                <option value="PRICE_ASC">Harga Termurah</option>
+                            </select>
+
+                            <input type="text" id="searchKatalog" oninput="renderJastipGrid()" placeholder="Cari baju..." class="col-span-2 lg:col-span-1 input-field py-1.5 text-xs w-full lg:w-48 lg:ml-auto">
                         </div>
                     </div>
                     
@@ -1043,11 +1065,25 @@
             const body = document.getElementById('adminInventoryBody');
             const search = document.getElementById('searchInventory').value.toLowerCase();
             const brand = document.getElementById('adminBrandFilter').value;
+            const sortMode = document.getElementById('adminSortFilter').value; // Mengambil nilai urutan
             
             let filtered = inventoryData.filter(item => 
                 (item.product.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) &&
                 (brand === "ALL" || item.brand === brand)
             );
+
+            // LOGIKA PENGURUTAN ADMIN
+            if (sortMode !== "") {
+                filtered.sort((a, b) => {
+                    if (sortMode === 'AZ') return a.product.localeCompare(b.product);
+                    if (sortMode === 'ZA') return b.product.localeCompare(a.product);
+                    if (sortMode === 'STOCK_DESC') return b.stock - a.stock;
+                    if (sortMode === 'STOCK_ASC') return a.stock - b.stock;
+                    if (sortMode === 'PRICE_DESC') return b.price - a.price;
+                    if (sortMode === 'PRICE_ASC') return a.price - b.price;
+                    return 0;
+                });
+            }
 
             document.getElementById('checkAll').checked = false;
             if (filtered.length === 0) {
@@ -1561,6 +1597,7 @@
             const search = document.getElementById('searchKatalog').value.toLowerCase();
             const brandFilter = document.getElementById('jastipBrandFilter').value;
             const discountFilter = document.getElementById('jastipDiscountFilter').value;
+            const sortMode = document.getElementById('jastipSortFilter').value; // Ambil opsi filter Jastiper
             
             let groups = getGroupedProducts().filter(p => p.product.toLowerCase().includes(search));
             if (brandFilter !== "ALL") groups = groups.filter(p => p.brand === brandFilter);
@@ -1572,6 +1609,20 @@
                     if (discountFilter === "40-50") return dVal >= 40 && dVal <= 50;
                     if (discountFilter === ">50") return dVal > 50;
                     return true;
+                });
+            }
+
+            // LOGIKA PENGURUTAN JASTIPER (Berdasarkan Harga Net / Setelah Diskon)
+            if (sortMode !== "") {
+                groups.sort((a, b) => {
+                    const netPriceA = a.price - (a.price * parseDiscountValue(a.discount) / 100);
+                    const netPriceB = b.price - (b.price * parseDiscountValue(b.discount) / 100);
+
+                    if (sortMode === 'AZ') return a.product.localeCompare(b.product);
+                    if (sortMode === 'ZA') return b.product.localeCompare(a.product);
+                    if (sortMode === 'PRICE_DESC') return netPriceB - netPriceA;
+                    if (sortMode === 'PRICE_ASC') return netPriceA - netPriceB;
+                    return 0;
                 });
             }
 
