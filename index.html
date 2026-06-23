@@ -673,27 +673,23 @@
 
         let tempMasterBase64 = null;
 
-        // --- REAL-TIME DATABASE LISTENER ---
-        db.ref('/').on('value', (snapshot) => {
-            const data = snapshot.val() || {};
-            userAccounts = data.jastip_users || [];
-            inventoryData = data.jastip_inventory || [];
-            photoDatabase = data.jastip_photos || {};
-            ordersData = data.jastip_orders || [];
-            masterDiscounts = data.jastip_master_discounts || {};
-            auditLogs = data.jastip_audit || [];
-            bankDatabase = data.jastip_bank || { 'ZS': { bankName: '', accNumber: '', accName: '' }, 'SHI': { bankName: '', accNumber: '', accName: '' } };
-            
-            warEndTimeGlobal = data.jastip_settings ? (data.jastip_settings.war_end_time || 0) : 0;
-
-            if(!isDbLoaded) {
+        // --- REAL-TIME DATABASE LISTENER (DIOPTIMALISASI UNTUK PERFORMA) ---
+        // Memisahkan listener agar tidak mendownload semua data (termasuk foto) setiap kali ada perubahan
+        let loadedNodes = 0;
+        const totalEssentialNodes = 8;
+        
+        function checkDbLoaded() {
+            loadedNodes++;
+            if (loadedNodes >= totalEssentialNodes && !isDbLoaded) {
                 isDbLoaded = true;
                 document.getElementById('loading-overlay').style.display = 'none';
                 init(); 
-            } else {
+            } else if (isDbLoaded) {
                 renderAllViews(); 
             }
-        }, (error) => {
+        }
+
+        const errHandler = (error) => {
             document.getElementById('loading-overlay').innerHTML = `
                 <div class="text-rose-600 text-5xl mb-3">⚠️</div>
                 <p class="text-base font-black text-slate-800 uppercase">Koneksi Database Ditolak!</p>
@@ -701,7 +697,18 @@
                 <button onclick="window.location.reload()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md">Coba Muat Ulang</button>
             `;
             console.error("FIREBASE ERROR:", error);
-        });
+        };
+
+        db.ref('jastip_users').on('value', s => { userAccounts = s.val() || []; checkDbLoaded(); }, errHandler);
+        db.ref('jastip_inventory').on('value', s => { inventoryData = s.val() || []; checkDbLoaded(); }, errHandler);
+        db.ref('jastip_orders').on('value', s => { ordersData = s.val() || []; checkDbLoaded(); }, errHandler);
+        db.ref('jastip_master_discounts').on('value', s => { masterDiscounts = s.val() || {}; checkDbLoaded(); }, errHandler);
+        db.ref('jastip_audit').on('value', s => { auditLogs = s.val() || []; checkDbLoaded(); }, errHandler);
+        db.ref('jastip_bank').on('value', s => { bankDatabase = s.val() || { 'ZS': { bankName: '', accNumber: '', accName: '' }, 'SHI': { bankName: '', accNumber: '', accName: '' } }; checkDbLoaded(); }, errHandler);
+        db.ref('jastip_settings').on('value', s => { warEndTimeGlobal = s.val() ? (s.val().war_end_time || 0) : 0; checkDbLoaded(); }, errHandler);
+        
+        // Listener foto dipisah
+        db.ref('jastip_photos').on('value', s => { photoDatabase = s.val() || {}; checkDbLoaded(); }, errHandler);
 
         // --- FUNGSI SET DAN STOP TIMER WAR ---
         function setWarTimer() {
@@ -1102,10 +1109,14 @@
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
                             let w = img.width, h = img.height;
-                            if (w > 600) { h *= 600 / w; w = 600; }
+                            
+                            // Optimalisasi Ukuran Foto agar Ringan (Max 400px)
+                            if (w > 400) { h *= 400 / w; w = 400; }
                             canvas.width = w; canvas.height = h;
                             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                            const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+                            
+                            // Kompresi ditingkatkan menjadi 60%
+                            const base64Image = canvas.toDataURL('image/jpeg', 0.6); 
 
                             if (targetType === 'master') {
                                 tempMasterBase64 = base64Image;
@@ -1144,21 +1155,24 @@
             }
         }
 
+        // --- DIRECT UPDATE METHOD UNTUK MENYIMPAN FOTO DENGAN CEPAT ---
         function saveMasterPhoto() {
             const target = document.getElementById('masterProductSelect').value;
             if (!target || !tempMasterBase64) return showToast("Lengkapi pilihan!", true);
             
-            db.ref('jastip_photos').once('value').then(s => {
-                let photos = s.val() || {};
-                photos[target] = tempMasterBase64;
-                db.ref('jastip_photos').set(photos).then(() => {
-                    logAdminActivity("Upload Foto", `Menambahkan/memperbarui foto master untuk baju: ${target}`);
-                    tempMasterBase64 = null;
-                    document.getElementById('masterPastePreview').classList.add('hidden');
-                    document.getElementById('pasteText').classList.remove('hidden');
-                    document.getElementById('btnSaveMasterPhoto').classList.add('hidden');
-                    showToast("Foto berhasil diikat!");
-                });
+            // Menggunakan .update() spesifik ke 1 foto, bukan mengunduh dan menimpa semua foto
+            const updateData = {};
+            updateData[target] = tempMasterBase64;
+            
+            db.ref('jastip_photos').update(updateData).then(() => {
+                logAdminActivity("Upload Foto", `Menambahkan/memperbarui foto master untuk baju: ${target}`);
+                tempMasterBase64 = null;
+                document.getElementById('masterPastePreview').classList.add('hidden');
+                document.getElementById('pasteText').classList.remove('hidden');
+                document.getElementById('btnSaveMasterPhoto').classList.add('hidden');
+                showToast("Foto berhasil diikat dengan cepat!");
+            }).catch(e => {
+                showToast("Gagal menyimpan foto: " + e.message, true);
             });
         }
 
