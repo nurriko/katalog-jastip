@@ -93,7 +93,7 @@
         </div>
     </nav>
 
-    <!-- BANNER GLOBAL FOMO KHUSUS JASTIPER (Disembunyikan di awal, dimunculkan via JS jika timer aktif) -->
+    <!-- BANNER GLOBAL FOMO KHUSUS JASTIPER -->
     <div id="fomo-banner" class="hidden bg-amber-400 border-b-4 border-amber-500 shadow-md w-full relative overflow-hidden">
         <div class="container mx-auto max-w-7xl px-3 py-2 flex flex-col md:flex-row justify-between items-center font-black">
             <div class="flex items-center gap-2 text-amber-950 text-[11px] md:text-sm tracking-wider uppercase">
@@ -674,6 +674,10 @@
         
         let warStartTimeGlobal = 0;
         let warEndTimeGlobal = 0; 
+        
+        // VARIABEL ANTI DOUBLE CLICK
+        let isProcessingCheckout = false;
+        let isAddingToCart = false;
 
         const superAdmins = { 'admin1': 'admin123', 'admin2': 'admin123' };
 
@@ -808,7 +812,6 @@
                 return d > 0 ? `${d} Hari ${h}:${m}:${s}` : `${h}:${m}:${s}`;
             };
 
-            // 1. Kondisi SEBELUM WAR (Pintu Belum Dibuka)
             if (warStartTimeGlobal > now) {
                 const distToStart = warStartTimeGlobal - now;
                 const preWarEl = document.getElementById('pre-war-countdown');
@@ -817,13 +820,11 @@
                 document.getElementById('pre-war-countdown-container').classList.remove('hidden');
                 document.getElementById('fomo-banner').classList.add('hidden');
                 
-                // Tendang Jastiper jika mereka masih login sebelum waktunya
                 if (currentUser && !isAdmin) {
                     logout();
                     showToast("Sesi WAR belum dimulai, Anda dikeluarkan dari arena.", true);
                 }
             } 
-            // 2. Kondisi SAAT WAR BERLANGSUNG
             else if (warStartTimeGlobal <= now && warEndTimeGlobal > now) {
                 document.getElementById('pre-war-countdown-container').classList.add('hidden');
                 
@@ -835,7 +836,6 @@
                     document.getElementById('fomo-banner').classList.remove('hidden');
                 }
             } 
-            // 3. Kondisi SETELAH WAR (Atau Jika Belum Ada Jadwal)
             else {
                 document.getElementById('pre-war-countdown-container').classList.add('hidden');
                 document.getElementById('fomo-banner').classList.add('hidden');
@@ -913,12 +913,10 @@
                         if (order.status === 'Pending' && order.expiryTime && now > order.expiryTime && isTargetUser(order.username)) {
                             order.status = 'Cancelled';
                             const targetItem = cInv.find(item => item.sku === order.sku);
-                            if (targetItem) targetItem.stock += order.qty;
+                            if (targetItem) targetItem.stock += order.qty; 
                             changed = true;
                             toKeep.push(order);
                         } else if (order.status === 'Cart' && order.cartExpiryTime && now > order.cartExpiryTime && isTargetUser(order.username)) {
-                            const targetItem = cInv.find(item => item.sku === order.sku);
-                            if (targetItem) targetItem.stock += order.qty;
                             changed = true;
                         } else {
                             toKeep.push(order);
@@ -1005,7 +1003,6 @@
             if (isLoginMode) {
                 const isAdmin = Object.keys(superAdmins).map(k => k.toLowerCase()).includes(uLower);
                 
-                // BLOK JASTIPER JIKA WAR BELUM MULAI
                 if (!isAdmin && warStartTimeGlobal > Date.now()) {
                     return showToast("Pintu arena belum dibuka! Silakan tunggu waktu hitung mundur selesai.", true);
                 }
@@ -2203,9 +2200,16 @@
 
         function submitOrder() {
             if (!selectedVariantForOrder) return;
+            if (isAddingToCart) return; // Mencegah double klik
+            isAddingToCart = true;
+            
             const qtyInput = document.getElementById('modal-qty-input');
             const requestedQty = parseInt(qtyInput.value) || 1;
-            if(requestedQty < 1) return showToast("Jumlah tidak valid!", true);
+            
+            if(requestedQty < 1) {
+                isAddingToCart = false;
+                return showToast("Jumlah tidak valid!", true);
+            }
             
             db.ref('/').once('value').then(snap => {
                 let data = snap.val() || {};
@@ -2214,12 +2218,11 @@
                 
                 const targetIndex = cInv.findIndex(item => item.id === selectedVariantForOrder.id);
                 if (targetIndex < 0 || cInv[targetIndex].stock < requestedQty) {
+                    isAddingToCart = false;
                     showToast("💥 GAGAL! Target ini baru saja direbut jastiper lain di arena!", true);
                     closeModal();
                     return;
                 }
-
-                cInv[targetIndex].stock -= requestedQty;
 
                 const target = cInv[targetIndex];
                 const discPercent = parseDiscountValue(target.discount);
@@ -2240,11 +2243,14 @@
 
                 cOrd.push(itemOrder);
 
-                db.ref('jastip_inventory').set(cInv);
-                db.ref('jastip_orders').set(cOrd);
-
-                showToast(`🚀 BERHASIL! ${requestedQty} PCS diamankan ke keranjang!`);
-                closeModal();
+                db.ref('jastip_orders').set(cOrd).then(() => {
+                    isAddingToCart = false;
+                    showToast(`🚀 BERHASIL! ${requestedQty} PCS dimasukkan ke keranjang sementara!`);
+                    closeModal();
+                });
+            }).catch(e => {
+                isAddingToCart = false;
+                showToast("Terjadi kesalahan jaringan", true);
             });
         }
 
@@ -2268,13 +2274,10 @@
                 if(iIndex < 0) return showToast("Data barang tidak ditemukan di sistem!", true);
 
                 const item = cInv[iIndex];
-                const diff = newQty - order.qty;
-
-                if(diff > 0 && item.stock < diff) {
+                
+                if(item.stock < newQty) {
                     return showToast(`Gagal! Sisa stok target tersebut di arena hanya: ${item.stock} Pcs`, true);
                 }
-
-                item.stock -= diff;
                 
                 order.qty = newQty;
                 const discPercent = parseDiscountValue(item.discount);
@@ -2286,7 +2289,6 @@
                 order.discountCut = singleCut * newQty;
                 order.netPrice = singleNet * newQty;
 
-                db.ref('jastip_inventory').set(cInv);
                 db.ref('jastip_orders').set(cOrd);
                 showToast("Jumlah amunisi pesanan berhasil diupdate!");
             });
@@ -2296,18 +2298,11 @@
             if(!confirm("Yakin hapus target ini dari keranjang? (Stok akan dikembalikan ke arena WAR)")) return;
             db.ref('/').once('value').then(s => {
                 let data = s.val() || {};
-                let cInv = data.jastip_inventory || [];
                 let cOrd = data.jastip_orders || [];
 
                 const oIndex = cOrd.findIndex(o => o.id === orderId);
                 if (oIndex > -1) {
-                    const order = cOrd[oIndex];
-                    const iIndex = cInv.findIndex(i => i.sku === order.sku);
-                    if (iIndex > -1) {
-                        cInv[iIndex].stock += order.qty; 
-                    }
                     cOrd.splice(oIndex, 1); 
-                    db.ref('jastip_inventory').set(cInv);
                     db.ref('jastip_orders').set(cOrd);
                     showToast("Target dilepaskan dari keranjang!");
                 }
@@ -2459,49 +2454,83 @@
         }
 
         function clearMyCart() {
-            if(!confirm("⚠️ Kosongkan keranjang? Stok akan dikembalikan ke arena dan diperebutkan jastiper lain!")) return;
+            if(!confirm("⚠️ Kosongkan keranjang?")) return;
             
             db.ref('/').once('value').then(s => {
                 let data = s.val() || {};
-                let cInv = data.jastip_inventory || [];
                 let cOrd = data.jastip_orders || [];
-                
-                cOrd.forEach(o => {
-                    if((o.status === 'Cart') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()) {
-                        const invItem = cInv.find(i => i.sku === o.sku);
-                        if(invItem) invItem.stock += o.qty;
-                    }
-                });
                 
                 cOrd = cOrd.filter(o => !((o.status === 'Cart') && o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase()));
                 
-                db.ref('jastip_inventory').set(cInv);
                 db.ref('jastip_orders').set(cOrd);
                 showToast("Keranjang dikosongkan. Target telah dilepaskan.");
             });
         }
 
+        // --- UPDATE PENTING: CHECKOUT RACE CONDITION (STOK BARU DIPOTONG DISINI) ---
         function processSelesaiCheckout() {
-            db.ref('jastip_orders').once('value').then(s => {
-                let cOrd = s.val() || [];
+            if (isProcessingCheckout) return; // Mencegah double klik
+            isProcessingCheckout = true;
+            
+            showToast("⏳ Sedang memproses dan mengunci pesanan Anda...");
+
+            db.ref('/').once('value').then(s => {
+                let data = s.val() || {};
+                let cInv = data.jastip_inventory || [];
+                let cOrd = data.jastip_orders || [];
+                
                 const activeCart = cOrd.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart');
                 
-                if(activeCart.length === 0) return showToast("Keranjang kosong!", true);
+                if(activeCart.length === 0) {
+                    isProcessingCheckout = false;
+                    return showToast("Keranjang kosong!", true);
+                }
 
+                let checkoutSuccess = true;
+                let failedItems = [];
+                let newCOrd = [];
+                
                 const limitTenMinutes = Date.now() + 10 * 60 * 1000;
                 const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
 
-                cOrd.forEach(order => {
-                    if(order.username && currentUser && order.username.toLowerCase() === currentUser.toLowerCase() && order.status === 'Cart') {
-                        order.status = 'Pending';
-                        order.expiryTime = limitTenMinutes;
-                        order.date = unifiedCheckoutTime;
-                        order.cartExpiryTime = null;
+                activeCart.forEach(cartItem => {
+                    const invIndex = cInv.findIndex(i => i.sku === cartItem.sku);
+                    
+                    if (invIndex > -1 && cInv[invIndex].stock >= cartItem.qty) {
+                        cInv[invIndex].stock -= cartItem.qty; 
+                        
+                        cartItem.status = 'Pending';
+                        cartItem.expiryTime = limitTenMinutes;
+                        cartItem.date = unifiedCheckoutTime;
+                        cartItem.cartExpiryTime = null;
+                        
+                        newCOrd.push(cartItem);
+                    } else {
+                        checkoutSuccess = false;
+                        failedItems.push(cartItem.product);
                     }
                 });
 
-                db.ref('jastip_orders').set(cOrd);
-                showToast("🔥 Target Terkunci! Segera lakukan pembayaran.");
+                let finalOrd = cOrd.filter(o => !(o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart'));
+                finalOrd = finalOrd.concat(newCOrd);
+
+                if (failedItems.length > 0) {
+                    db.ref('jastip_inventory').set(cInv);
+                    db.ref('jastip_orders').set(finalOrd).then(() => {
+                        isProcessingCheckout = false;
+                        showToast(`⚠️ GAGAL! Anda kalah cepat. Target berikut sudah habis direbut jastiper lain: ${failedItems.join(', ')}`, true);
+                        renderAllViews();
+                    });
+                } else {
+                    db.ref('jastip_inventory').set(cInv);
+                    db.ref('jastip_orders').set(finalOrd).then(() => {
+                        isProcessingCheckout = false;
+                        showToast("🔥 Target Terkunci! Segera lakukan pembayaran.");
+                    });
+                }
+            }).catch(e => {
+                isProcessingCheckout = false;
+                showToast("Terjadi kesalahan jaringan", true);
             });
         }
 
