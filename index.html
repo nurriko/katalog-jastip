@@ -116,6 +116,14 @@
         <!-- AUTHENTICATION VIEW -->
         <div id="auth-view" class="max-w-md mx-auto my-8 md:my-16 animate-fade-up px-2 md:px-0 hidden">
             <div class="card p-6 md:p-8 border-t-8 border-red-600 shadow-2xl">
+                
+                <!-- HITUNG MUNDUR KHUSUS SEBELUM LOGIN -->
+                <div id="pre-war-countdown-container" class="hidden text-center mb-6 p-4 bg-rose-50 border-2 border-rose-200 rounded-2xl shadow-inner">
+                    <p class="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1.5 animate-pulse">PINTU ARENA DIBUKA DALAM</p>
+                    <div id="pre-war-countdown" class="text-2xl md:text-3xl font-black text-rose-800 font-mono tracking-widest">00:00:00</div>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase mt-2">Jastiper baru bisa login saat waktu habis</p>
+                </div>
+
                 <div class="text-center mb-6">
                     <span class="text-4xl">🔥</span>
                     <h2 id="auth-title" class="text-xl md:text-2xl font-black text-slate-800 mt-2 uppercase tracking-tight">LOGIN ARENA WAR</h2>
@@ -149,16 +157,22 @@
                 <!-- Tab 1: Inventory, Photos & Discount -->
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
 
-                    <!-- PENGATURAN EVENT WAR (TIMER) -->
+                    <!-- PENGATURAN EVENT WAR (TIMER BERBASIS TANGGAL & JAM) -->
                     <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-br from-white to-amber-50/30">
-                        <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-amber-900">⏳ Pengaturan Waktu WAR (Banner Jastiper)</h3>
-                        <div class="flex flex-col md:flex-row gap-3 items-end">
-                            <div class="w-full md:w-1/3">
-                                <label class="text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Durasi WAR (Menit)</label>
-                                <input type="number" id="warDurationInput" placeholder="Contoh: 120 untuk 2 jam" class="input-field font-black text-amber-900 bg-white border-amber-300 focus:border-amber-500">
+                        <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-amber-900">⏳ Pengaturan Jadwal WAR (Akses Login & Banner)</h3>
+                        <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Saat dijadwalkan, Jastiper <strong>tidak akan bisa login</strong> sebelum "Waktu Mulai" tiba.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                            <div>
+                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-1">Waktu Mulai WAR</label>
+                                <input type="datetime-local" id="warStartTimeInput" class="input-field font-black text-amber-900 bg-white border-amber-300 focus:border-amber-500">
                             </div>
-                            <button onclick="setWarTimer()" class="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-amber-950 font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🚀 Mulai Timer</button>
-                            <button onclick="stopWarTimer()" class="w-full md:w-auto bg-slate-800 hover:bg-black text-white font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🛑 Stop & Sembunyikan</button>
+                            <div>
+                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-1">Waktu Berakhir WAR</label>
+                                <input type="datetime-local" id="warEndTimeInput" class="input-field font-black text-amber-900 bg-white border-amber-300 focus:border-amber-500">
+                            </div>
+                            <button onclick="setWarTimer()" class="w-full bg-amber-500 hover:bg-amber-600 text-amber-950 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🚀 Jadwalkan WAR</button>
+                            <button onclick="stopWarTimer()" class="w-full bg-slate-800 hover:bg-black text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🛑 Batalkan Jadwal</button>
                         </div>
                     </div>
 
@@ -658,6 +672,7 @@
         let activeTimerInterval = null;
         let isListView = false; 
         
+        let warStartTimeGlobal = 0;
         let warEndTimeGlobal = 0; 
 
         const superAdmins = { 'admin1': 'admin123', 'admin2': 'admin123' };
@@ -674,7 +689,6 @@
         let tempMasterBase64 = null;
 
         // --- REAL-TIME DATABASE LISTENER (DIOPTIMALISASI UNTUK PERFORMA) ---
-        // Memisahkan listener agar tidak mendownload semua data (termasuk foto) setiap kali ada perubahan
         let loadedNodes = 0;
         const totalEssentialNodes = 8;
         
@@ -705,28 +719,53 @@
         db.ref('jastip_master_discounts').on('value', s => { masterDiscounts = s.val() || {}; checkDbLoaded(); }, errHandler);
         db.ref('jastip_audit').on('value', s => { auditLogs = s.val() || []; checkDbLoaded(); }, errHandler);
         db.ref('jastip_bank').on('value', s => { bankDatabase = s.val() || { 'ZS': { bankName: '', accNumber: '', accName: '' }, 'SHI': { bankName: '', accNumber: '', accName: '' } }; checkDbLoaded(); }, errHandler);
-        db.ref('jastip_settings').on('value', s => { warEndTimeGlobal = s.val() ? (s.val().war_end_time || 0) : 0; checkDbLoaded(); }, errHandler);
         
-        // Listener foto dipisah
+        // Memuat Waktu Mulai & Waktu Akhir dari Firebase
+        db.ref('jastip_settings').on('value', s => { 
+            const data = s.val();
+            if (data) {
+                warStartTimeGlobal = data.war_start_time || 0;
+                warEndTimeGlobal = data.war_end_time || 0;
+            } else {
+                warStartTimeGlobal = 0;
+                warEndTimeGlobal = 0;
+            }
+            checkDbLoaded(); 
+        }, errHandler);
+        
         db.ref('jastip_photos').on('value', s => { photoDatabase = s.val() || {}; checkDbLoaded(); }, errHandler);
 
         // --- FUNGSI SET DAN STOP TIMER WAR ---
         function setWarTimer() {
-            const minutes = parseInt(document.getElementById('warDurationInput').value);
-            if(isNaN(minutes) || minutes <= 0) return showToast("Masukkan durasi yang valid dalam menit!", true);
+            const startVal = document.getElementById('warStartTimeInput').value;
+            const endVal = document.getElementById('warEndTimeInput').value;
             
-            const endTime = Date.now() + (minutes * 60 * 1000);
-            db.ref('jastip_settings/war_end_time').set(endTime).then(() => {
-                logAdminActivity("Set Timer WAR", `Mengatur waktu WAR selama ${minutes} menit.`);
-                showToast(`Timer WAR global berhasil diset untuk ${minutes} menit!`);
-                document.getElementById('warDurationInput').value = '';
+            if (!startVal || !endVal) return showToast("Harap isi waktu mulai dan waktu berakhir!", true);
+            
+            const startTime = new Date(startVal).getTime();
+            const endTime = new Date(endVal).getTime();
+            
+            if (endTime <= startTime) return showToast("Waktu berakhir harus lebih dari waktu mulai!", true);
+            if (endTime < Date.now()) return showToast("Waktu berakhir sudah lewat!", true);
+            
+            db.ref('jastip_settings').update({
+                war_start_time: startTime,
+                war_end_time: endTime
+            }).then(() => {
+                logAdminActivity("Jadwalkan WAR", `Mengatur WAR dari ${new Date(startTime).toLocaleString()} s/d ${new Date(endTime).toLocaleString()}`);
+                showToast("Jadwal WAR berhasil disimpan!");
             });
         }
 
         function stopWarTimer() {
-            db.ref('jastip_settings/war_end_time').set(0).then(() => {
-                logAdminActivity("Stop Timer WAR", `Menghentikan paksa dan menyembunyikan timer WAR.`);
-                showToast(`Timer WAR global dihentikan!`);
+            db.ref('jastip_settings').update({
+                war_start_time: 0,
+                war_end_time: 0
+            }).then(() => {
+                logAdminActivity("Batalkan Jadwal WAR", `Mereset/membatalkan jadwal WAR.`);
+                showToast("Jadwal WAR dibatalkan!");
+                document.getElementById('warStartTimeInput').value = '';
+                document.getElementById('warEndTimeInput').value = '';
             });
         }
 
@@ -758,22 +797,50 @@
 
         // --- GLOBAL BANNER COUNTDOWN (SYNC DENGAN FIREBASE) ---
         setInterval(() => {
-            if (warEndTimeGlobal > Date.now()) {
-                const dist = warEndTimeGlobal - Date.now();
+            const now = Date.now();
+            const isAdmin = currentUser && Object.keys(superAdmins).map(k => k.toLowerCase()).includes(currentUser.toLowerCase());
+            
+            const formatTime = (dist) => {
                 const h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
                 const m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
                 const s = Math.floor((dist % (1000 * 60)) / 1000).toString().padStart(2, '0');
-                const el = document.getElementById('global-countdown');
-                if(el) el.innerText = `${h}:${m}:${s}`;
+                const d = Math.floor(dist / (1000 * 60 * 60 * 24));
+                return d > 0 ? `${d} Hari ${h}:${m}:${s}` : `${h}:${m}:${s}`;
+            };
+
+            // 1. Kondisi SEBELUM WAR (Pintu Belum Dibuka)
+            if (warStartTimeGlobal > now) {
+                const distToStart = warStartTimeGlobal - now;
+                const preWarEl = document.getElementById('pre-war-countdown');
+                if(preWarEl) preWarEl.innerText = formatTime(distToStart);
                 
-                if (currentUser && !Object.keys(superAdmins).map(k => k.toLowerCase()).includes(currentUser.toLowerCase())) {
+                document.getElementById('pre-war-countdown-container').classList.remove('hidden');
+                document.getElementById('fomo-banner').classList.add('hidden');
+                
+                // Tendang Jastiper jika mereka masih login sebelum waktunya
+                if (currentUser && !isAdmin) {
+                    logout();
+                    showToast("Sesi WAR belum dimulai, Anda dikeluarkan dari arena.", true);
+                }
+            } 
+            // 2. Kondisi SAAT WAR BERLANGSUNG
+            else if (warStartTimeGlobal <= now && warEndTimeGlobal > now) {
+                document.getElementById('pre-war-countdown-container').classList.add('hidden');
+                
+                const distToEnd = warEndTimeGlobal - now;
+                const globalEl = document.getElementById('global-countdown');
+                if(globalEl) globalEl.innerText = formatTime(distToEnd);
+                
+                if (currentUser && !isAdmin) {
                     document.getElementById('fomo-banner').classList.remove('hidden');
                 }
-            } else {
-                const el = document.getElementById('global-countdown');
-                if(el) el.innerText = `00:00:00`;
+            } 
+            // 3. Kondisi SETELAH WAR (Atau Jika Belum Ada Jadwal)
+            else {
+                document.getElementById('pre-war-countdown-container').classList.add('hidden');
                 document.getElementById('fomo-banner').classList.add('hidden');
             }
+            
         }, 1000);
 
         // --- REAL-TIME LIVE TOAST (FOMO EFFECT) ---
@@ -933,16 +1000,23 @@
             const p = document.getElementById('password').value.trim();
             if(!rawU || !p) return showToast("Isi data lengkap!", true);
             
-            const u = rawU.toLowerCase(); 
+            const uLower = rawU.toLowerCase(); 
 
             if (isLoginMode) {
-                const adminKey = Object.keys(superAdmins).find(k => k.toLowerCase() === u);
+                const isAdmin = Object.keys(superAdmins).map(k => k.toLowerCase()).includes(uLower);
+                
+                // BLOK JASTIPER JIKA WAR BELUM MULAI
+                if (!isAdmin && warStartTimeGlobal > Date.now()) {
+                    return showToast("Pintu arena belum dibuka! Silakan tunggu waktu hitung mundur selesai.", true);
+                }
+                
+                const adminKey = Object.keys(superAdmins).find(k => k.toLowerCase() === uLower);
                 if (adminKey && superAdmins[adminKey] === p) {
                     loginSuccess(adminKey, true);
                     return;
                 }
                 
-                const user = userAccounts.find(x => x.username.toLowerCase() === u && x.password === p);
+                const user = userAccounts.find(x => x.username.toLowerCase() === uLower && x.password === p);
                 if (user) {
                     loginSuccess(user.username, false); 
                 } else {
@@ -954,13 +1028,13 @@
                 
                 if(!phone || !address) return showToast("Nomor telepon dan alamat wajib diisi!", true);
                 
-                if (Object.keys(superAdmins).find(k => k.toLowerCase() === u) || userAccounts.find(x => x.username.toLowerCase() === u)) {
+                if (Object.keys(superAdmins).find(k => k.toLowerCase() === uLower) || userAccounts.find(x => x.username.toLowerCase() === uLower)) {
                     return showToast("Username telah terpakai!", true);
                 }
                 
                 db.ref('jastip_users').once('value').then(s => {
                     let arr = s.val() || [];
-                    if (arr.find(x => x.username.toLowerCase() === u)) {
+                    if (arr.find(x => x.username.toLowerCase() === uLower)) {
                          return showToast("Username telah terpakai!", true);
                     }
                     arr.push({username: rawU, password: p, phone: phone, address: address}); 
@@ -1019,7 +1093,8 @@
                 document.getElementById('admin-view').classList.add('hidden');
                 document.getElementById('jastip-view').classList.remove('hidden');
                 
-                if (warEndTimeGlobal > Date.now()) {
+                const now = Date.now();
+                if (warStartTimeGlobal <= now && warEndTimeGlobal > now) {
                     document.getElementById('fomo-banner').classList.remove('hidden');
                 } else {
                     document.getElementById('fomo-banner').classList.add('hidden');
@@ -1110,12 +1185,10 @@
                             const canvas = document.createElement('canvas');
                             let w = img.width, h = img.height;
                             
-                            // Optimalisasi Ukuran Foto agar Ringan (Max 400px)
                             if (w > 400) { h *= 400 / w; w = 400; }
                             canvas.width = w; canvas.height = h;
                             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                             
-                            // Kompresi ditingkatkan menjadi 60%
                             const base64Image = canvas.toDataURL('image/jpeg', 0.6); 
 
                             if (targetType === 'master') {
@@ -1155,12 +1228,10 @@
             }
         }
 
-        // --- DIRECT UPDATE METHOD UNTUK MENYIMPAN FOTO DENGAN CEPAT ---
         function saveMasterPhoto() {
             const target = document.getElementById('masterProductSelect').value;
             if (!target || !tempMasterBase64) return showToast("Lengkapi pilihan!", true);
             
-            // Menggunakan .update() spesifik ke 1 foto, bukan mengunduh dan menimpa semua foto
             const updateData = {};
             updateData[target] = tempMasterBase64;
             
