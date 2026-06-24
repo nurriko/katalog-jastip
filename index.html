@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WAR Jastip ZS & Shi - Enterprise System</title>
     
+    <!-- SheetJS untuk Fitur Upload Excel Katalog -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
+    <!-- ExcelJS & FileSaver untuk Fitur Download Rekapan Superadmin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
+    <!-- FIREBASE SDK V8 COMPAT -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -19,6 +22,16 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; background-color: #f8fafc; }
         .hidden { display: none !important; }
+        
+        /* LOGO CUSTOM STYLE */
+        .brand-logo { font-weight: 900; letter-spacing: -1px; }
+        .logo-zs { color: #be123c; } /* Merah ZS */
+        .logo-shi { color: #1e293b; } /* Slate Dark SHI */
+
+        /* ANIMASI LOADING LOGO */
+        #loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .logo-spinner-3d { animation: flip3D 2.5s infinite ease-in-out; display: flex; gap: 1rem; align-items: center; transform-style: preserve-3d; }
+        @keyframes flip3D { 0% { transform: perspective(600px) rotateY(0deg); } 100% { transform: perspective(600px) rotateY(360deg); } }
         
         /* Animasi Keren untuk Efek WAR FOMO */
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -58,24 +71,26 @@
         .toast.error { background: #e11d48; }
         .toast.fomo { background: #0f172a; border-left: 4px solid #f59e0b; color: #f8fafc; }
         @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        /* Overlay Loading */
-        #loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #e11d48; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-slate-800">
 
+    <!-- Loading Database Overlay dengan Logo Custom -->
     <div id="loading-overlay">
-        <div class="loader"></div>
-        <p class="text-sm font-black text-slate-700 mt-4 text-center uppercase tracking-widest">MEMUAT ARENA WAR...</p>
+        <div class="logo-spinner-3d">
+            <img id="loading-logo-zs" src="" alt="ZS Logo Loading" class="w-20 h-20 md:w-28 md:h-28 object-cover rounded-2xl shadow-xl border border-slate-100">
+            <img id="loading-logo-shi" src="" alt="SHI Logo Loading" class="w-20 h-20 md:w-28 md:h-28 object-cover rounded-2xl shadow-xl border border-slate-100">
+        </div>
     </div>
 
+    <!-- NAVIGATION TEMA MERAH BERANI (FLASH SALE) -->
     <nav class="bg-gradient-to-r from-red-700 via-rose-600 to-red-600 text-white p-3 md:p-4 sticky top-0 z-50 shadow-xl">
         <div class="container mx-auto flex justify-between items-center max-w-7xl">
             <div class="flex items-center gap-2 md:gap-3">
-                <div class="bg-white p-1.5 md:p-2 rounded-xl text-sm md:text-xl shadow-inner">🛍️</div>
+                <div class="bg-white p-1.5 md:p-2 rounded-xl text-sm md:text-xl shadow-inner flex items-center justify-center">
+                    <img id="nav-logo-zs" src="" class="w-5 h-5 md:w-6 md:h-6 object-cover rounded mr-1">
+                    <img id="nav-logo-shi" src="" class="w-5 h-5 md:w-6 md:h-6 object-cover rounded">
+                </div>
                 <div>
                     <h1 class="font-black text-sm md:text-lg tracking-wider leading-tight">WAR ZS & SHI</h1>
                     <p id="user-role-label" class="text-[9px] md:text-[10px] text-red-200 uppercase font-bold tracking-widest">Sistem Terpusat</p>
@@ -88,6 +103,7 @@
         </div>
     </nav>
 
+    <!-- BANNER GLOBAL FOMO KHUSUS JASTIPER -->
     <div id="fomo-banner" class="hidden bg-amber-400 border-b-4 border-amber-500 shadow-md w-full relative overflow-hidden">
         <div class="container mx-auto max-w-7xl px-3 py-2 flex flex-col md:flex-row justify-between items-center font-black">
             <div class="flex items-center gap-2 text-amber-950 text-[11px] md:text-sm tracking-wider uppercase">
@@ -107,9 +123,11 @@
 
     <div class="container mx-auto p-3 md:p-4 max-w-7xl mb-10">
 
+        <!-- AUTHENTICATION VIEW -->
         <div id="auth-view" class="max-w-md mx-auto my-8 md:my-16 animate-fade-up px-2 md:px-0 hidden">
             <div class="card p-6 md:p-8 border-t-8 border-red-600 shadow-2xl">
                 
+                <!-- HITUNG MUNDUR KHUSUS SEBELUM LOGIN -->
                 <div id="pre-war-countdown-container" class="hidden text-center mb-6 p-4 bg-rose-50 border-2 border-rose-200 rounded-2xl shadow-inner">
                     <p class="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1.5 animate-pulse">PINTU ARENA DIBUKA DALAM</p>
                     <div id="pre-war-countdown" class="text-2xl md:text-3xl font-black text-rose-800 font-mono tracking-widest">00:00:00</div>
@@ -117,8 +135,14 @@
                 </div>
 
                 <div class="text-center mb-6">
-                    <span class="text-4xl">🔥</span>
-                    <h2 id="auth-title" class="text-xl md:text-2xl font-black text-slate-800 mt-2 uppercase tracking-tight">LOGIN ARENA WAR</h2>
+                    <!-- LOGO BRAND CUSTOM DI LOGIN -->
+                    <div class="flex justify-center items-center gap-4 mb-5">
+                        <img id="login-logo-zs" src="" alt="ZS Logo" class="w-20 h-20 object-cover rounded-2xl shadow-lg border border-slate-100">
+                        <span class="text-slate-200 text-4xl font-light">|</span>
+                        <img id="login-logo-shi" src="" alt="SHI Logo" class="w-20 h-20 object-cover rounded-2xl shadow-lg border border-slate-100">
+                    </div>
+                    
+                    <h2 id="auth-title" class="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-tight">LOGIN ARENA WAR</h2>
                     <p class="text-[10px] md:text-xs text-slate-500 font-bold mt-1 uppercase tracking-widest">Siapkan koneksi internet Anda</p>
                 </div>
                 <div class="space-y-4">
@@ -134,8 +158,10 @@
             </div>
         </div>
 
+        <!-- MAIN DASHBOARD -->
         <div id="app-view" class="hidden animate-fade-up mt-4">
             
+            <!-- SUPER ADMIN VIEW -->
             <div id="admin-view" class="hidden">
                 <div class="flex gap-2 md:gap-4 border-b-2 border-slate-200 mb-4 md:mb-6 overflow-x-auto hide-scrollbar pb-1">
                     <button onclick="switchAdminTab('inventory')" id="tab-inventory" class="tab-btn active">📦 Kelola Stock</button>
@@ -144,8 +170,10 @@
                     <button onclick="switchAdminTab('audit')" id="tab-audit" class="tab-btn">📜 Log Aktivitas</button>
                 </div>
 
+                <!-- Tab 1: Inventory, Photos & Discount -->
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
 
+                    <!-- PENGATURAN EVENT WAR (TIMER BERBASIS TANGGAL & JAM) -->
                     <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-br from-white to-amber-50/30">
                         <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-amber-900">⏳ Pengaturan Jadwal WAR (Akses Login & Banner)</h3>
                         <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Saat dijadwalkan, Jastiper <strong>tidak akan bisa login</strong> sebelum "Waktu Mulai" tiba.</p>
@@ -163,7 +191,27 @@
                             <button onclick="stopWarTimer()" class="w-full bg-slate-800 hover:bg-black text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🛑 Batalkan Jadwal</button>
                         </div>
                     </div>
+                    
+                    <!-- PENGATURAN LOGO BRAND -->
+                    <div class="card p-4 md:p-5 border-t-4 border-indigo-500 bg-gradient-to-br from-white to-slate-50/50">
+                        <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-slate-800">🖼️ Pengaturan Logo Aplikasi</h3>
+                        <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Upload logo ZS dan SHI untuk ditampilkan di halaman Login, Loading, dan Navigasi.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-2">Upload Logo ZS</label>
+                                <input type="file" id="uploadLogoZS" accept="image/*" class="block w-full text-[10px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:font-black file:bg-slate-100 file:text-slate-800 cursor-pointer hover:file:bg-slate-200 mb-3 transition">
+                                <button onclick="saveBrandLogo('ZS')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest shadow transition">Simpan Logo ZS</button>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-2">Upload Logo SHI</label>
+                                <input type="file" id="uploadLogoSHI" accept="image/*" class="block w-full text-[10px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:font-black file:bg-slate-100 file:text-slate-800 cursor-pointer hover:file:bg-slate-200 mb-3 transition">
+                                <button onclick="saveBrandLogo('SHI')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest shadow transition">Simpan Logo SHI</button>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- RESET EVENT ALERT -->
                     <div class="bg-rose-50 border-2 border-rose-200 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-3 shadow-sm">
                         <div>
                             <h3 class="font-black text-rose-800 text-sm md:text-base uppercase tracking-wider">Tindakan Khusus Event Baru</h3>
@@ -214,6 +262,7 @@
                         </div>
                     </div>
 
+                    <!-- Master Diskon Manager -->
                     <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-br from-white to-amber-50/30">
                         <h3 class="font-black text-sm uppercase mb-1 flex items-center gap-2 text-amber-900 tracking-wide">🏷️ Master Diskon Manager</h3>
                         <p class="text-[10px] md:text-[11px] text-slate-500 mb-3 font-bold">Terapkan diskon massal. Hanya baju yang <strong>belum memiliki diskon</strong> yang akan tampil di sini.</p>
@@ -236,6 +285,7 @@
                             </div>
                         </div>
                         
+                        <!-- Panel Informasi Harga -->
                         <div id="discountPriceInfo" class="mt-3 hidden p-3 bg-white border border-amber-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm">
                             <div class="text-[10px] md:text-[11px] text-slate-500 font-black uppercase mb-1 md:mb-0 tracking-wide">
                                 💼 HPP (Harga Modal): <span id="infoHPP" class="font-black text-slate-800 ml-1 text-xs md:text-sm">Rp 0</span>
@@ -246,6 +296,7 @@
                         </div>
                     </div>
 
+                    <!-- Inventory Table -->
                     <div class="card p-4 md:p-5 shadow-sm border-t-4 border-slate-300">
                         <div class="flex flex-col md:flex-row justify-between gap-4 mb-5">
                             <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full">
@@ -257,6 +308,7 @@
                                     <option value="SHI">SHI Saja</option>
                                 </select>
 
+                                <!-- DROPDOWN FILTER URUTAN ADMIN -->
                                 <select id="adminSortFilter" onchange="onAdminFilterChange()" class="input-field py-2 px-3 text-xs font-bold w-full lg:w-44 bg-slate-50 border-slate-200">
                                     <option value="">Urutan Default</option>
                                     <option value="AZ">Abjad (A - Z)</option>
@@ -295,10 +347,13 @@
                     </div>
                 </div>
 
+                <!-- Tab 2: Orders Dashboard & Rekening Setup (Admin) -->
                 <div id="admin-tab-orders" class="hidden card p-4 md:p-5 space-y-5 border-t-4 border-indigo-500 shadow-sm">
                     
+                    <!-- PENGATURAN REKENING PEMBAYARAN -->
                     <h3 class="font-black text-sm uppercase tracking-wide text-slate-800">⚙️ Pengaturan Rekening Pembayaran</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                        <!-- ZS Bank Info -->
                         <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between space-y-4 shadow-inner">
                             <div>
                                 <h4 class="font-black text-xs uppercase mb-3 text-slate-700 tracking-wider">Rekening - Brand ZS</h4>
@@ -309,6 +364,7 @@
                             <button onclick="saveBankInfo('ZS')" class="w-full bg-slate-800 hover:bg-black text-white text-[10px] py-3 rounded-lg font-black uppercase tracking-widest shadow-md transition">Simpan Rekening ZS</button>
                         </div>
                         
+                        <!-- SHI Bank Info -->
                         <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between space-y-4 shadow-inner">
                             <div>
                                 <h4 class="font-black text-xs uppercase mb-3 text-slate-700 tracking-wider">Rekening - Brand SHI</h4>
@@ -343,6 +399,7 @@
                     </div>
                 </div>
 
+                <!-- Tab 3: Users -->
                 <div id="admin-tab-users" class="hidden card p-4 md:p-5 space-y-4 border-t-4 border-slate-400 shadow-sm">
                     <h3 class="font-black text-sm uppercase tracking-wide">👥 Daftar Akun Jastiper</h3>
                     <div class="table-container border border-slate-200 bg-white">
@@ -362,6 +419,7 @@
                     </div>
                 </div>
 
+                <!-- Tab 4: Audit Trail (Log Aktivitas) -->
                 <div id="admin-tab-audit" class="hidden card p-4 md:p-5 space-y-4 border-t-4 border-slate-800 shadow-sm bg-slate-50">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                         <div>
@@ -387,6 +445,7 @@
                 </div>
             </div>
 
+            <!-- JASTIPER VIEW -->
             <div id="jastip-view" class="hidden">
                 <div class="flex gap-2 md:gap-4 border-b-2 border-slate-200 mb-4 overflow-x-auto hide-scrollbar pb-1">
                     <button onclick="switchJastipTab('catalog')" id="jastip-tab-catalog" class="tab-btn active">🛍️ Katalog Baju</button>
@@ -396,6 +455,7 @@
                     </button>
                 </div>
 
+                <!-- Jastiper Sub-Tab 1: Catalog -->
                 <div id="jastip-panel-catalog" class="space-y-4">
                     <div class="bg-white p-3 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
                         <div class="flex items-center gap-2">
@@ -403,6 +463,7 @@
                             <h2 class="text-base md:text-lg font-black uppercase text-slate-800 tracking-wide">Filter Radar Target</h2>
                         </div>
                         
+                        <!-- Grid Input Responsif HP -->
                         <div class="grid grid-cols-2 lg:flex lg:flex-wrap items-center gap-2 md:gap-3 w-full">
                             <select id="jastipBrandFilter" onchange="renderJastipGrid()" class="input-field py-2 text-[10px] md:text-xs font-bold w-full lg:w-32 bg-slate-50 border-slate-200">
                                 <option value="ALL">Semua Brand</option>
@@ -417,6 +478,7 @@
                                 <option value=">50">Diskon > 50%</option>
                             </select>
                             
+                            <!-- DROPDOWN FILTER URUTAN JASTIPER -->
                             <select id="jastipSortFilter" onchange="renderJastipGrid()" class="col-span-1 input-field py-2 text-[10px] md:text-xs font-bold w-full lg:w-40 bg-slate-50 border-slate-200">
                                 <option value="">Urutan Default</option>
                                 <option value="AZ">Abjad (A - Z)</option>
@@ -427,13 +489,16 @@
 
                             <input type="text" id="searchKatalog" oninput="renderJastipGrid()" placeholder="Cari baju incaran..." class="col-span-1 input-field py-2 text-xs w-full lg:w-44 font-bold border-slate-300">
                             
+                            <!-- TOMBOL GRID/LIST VIEW -->
                             <button onclick="toggleViewMode()" id="viewModeBtn" class="col-span-2 lg:col-span-1 w-full lg:w-auto bg-slate-800 text-white py-2 px-4 rounded-xl text-[10px] md:text-xs font-black transition lg:ml-auto uppercase tracking-widest shadow-md hover:bg-black">Tampilan: LIST</button>
                         </div>
                     </div>
                     
+                    <!-- Grid Responsive Catalog -->
                     <div id="jastipGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-5 pb-8"></div>
                 </div>
 
+                <!-- Jastiper Sub-Tab 2: My Orders & Bank Gateway -->
                 <div id="jastip-panel-myorders" class="hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                         <div class="card p-4 md:p-6 lg:col-span-2 space-y-5 border-t-8 border-slate-800 shadow-xl">
@@ -442,6 +507,7 @@
                                 <button onclick="clearMyCart()" class="text-rose-600 hover:text-white hover:bg-rose-600 text-[9px] md:text-[10px] font-black uppercase px-3 py-1.5 bg-rose-50 rounded-lg transition tracking-widest border border-rose-200 hover:border-rose-600 shadow-sm">🗑️ Kosongkan</button>
                             </div>
                             
+                            <!-- TABEL KERANJANG BARU DENGAN STATUS DAN AKSI -->
                             <div class="table-container border border-slate-200 bg-slate-50/50">
                                 <table>
                                     <thead>
@@ -475,14 +541,16 @@
                                     <span id="sumNetPrice" class="text-red-600 text-lg md:text-xl">Rp 0</span>
                                 </div>
                                 
+                                <!-- Container Split Tagihan Per Brand -->
                                 <div id="splitTotalContainer" class="space-y-1.5 pt-3 border-t border-slate-200 mt-2"></div>
 
                                 <div class="pt-4" id="actionCheckoutRow">
-                                    <button onclick="processSelesaiCheckout()" class="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-rose-800 text-white font-black py-4 rounded-xl text-xs md:text-sm uppercase tracking-widest transition shadow-[0_5px_15px_-3px_rgba(225,29,72,0.5)] animate-heartbeat">⚔️ Kunci Target & Lanjut Bayar</button>
+                                    <button id="btnProcessCheckout" onclick="processSelesaiCheckout()" class="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-rose-800 text-white font-black py-4 rounded-xl text-xs md:text-sm uppercase tracking-widest transition shadow-[0_5px_15px_-3px_rgba(225,29,72,0.5)] animate-heartbeat">⚔️ Kunci Target & Lanjut Bayar</button>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Panel Rekening Pembayaran -->
                         <div id="qrisGatewayPanel" class="card p-5 md:p-6 border-t-8 border-amber-500 space-y-5 hidden h-fit shadow-xl bg-gradient-to-b from-white to-amber-50/20">
                             <div class="text-center bg-amber-100 p-4 rounded-xl border border-amber-300 shadow-inner">
                                 <h4 class="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center justify-center gap-1"><span class="animate-pulse">⏳</span> BATAS WAKTU TRANSFER</h4>
@@ -490,8 +558,10 @@
                                 <p class="text-[9px] md:text-[10px] text-amber-800 font-bold mt-2 leading-tight uppercase tracking-wide">JIKA WAKTU HABIS, PESANAN HANGUS & STOK DIKEMBALIKAN KE ARENA WAR!</p>
                             </div>
 
+                            <!-- Dynamic Bank Details Container -->
                             <div id="dynamicPaymentContainer" class="flex flex-col gap-4 justify-center items-center w-full">
-                                </div>
+                                <!-- Info Rekening akan di-inject disini melalui Javascript -->
+                            </div>
 
                             <button onclick="submitReceiptPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl text-xs md:text-sm uppercase tracking-widest transition shadow-[0_5px_15px_-3px_rgba(16,185,129,0.5)] mt-3">✅ Saya Sudah Transfer (Kirim Bukti)</button>
                         </div>
@@ -501,6 +571,7 @@
         </div>
     </div>
 
+    <!-- ADMIN PHOTO VIEW MODAL (TAMPILAN FOTO DI LIST DATA STOCK) -->
     <div id="admin-photo-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-2xl max-w-md w-full p-4 md:p-5 space-y-3 shadow-2xl">
             <div class="flex justify-between items-center border-b pb-3">
@@ -513,12 +584,15 @@
         </div>
     </div>
 
+    <!-- JASTIPER ORDER MODAL (RESPONSIF HP) TEMA WAR -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 md:p-4 hidden">
         <div class="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] border-2 border-red-100">
+            <!-- Bagian Gambar -->
             <div class="w-full md:w-1/2 bg-slate-50 p-4 md:p-6 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-200 relative">
                 <div id="modal-fomo-badge" class="hidden absolute top-4 left-4 z-10 bg-red-600 text-white px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-widest animate-pulse shadow-lg border border-red-400">🔥 SISA SEDIKIT!</div>
                 <img id="modal-img" class="w-full h-48 md:h-auto md:max-h-96 object-contain drop-shadow-xl mix-blend-multiply" src="" alt="Foto Baju">
             </div>
+            <!-- Bagian Konten Scrollable -->
             <div class="w-full md:w-1/2 p-5 md:p-8 flex flex-col flex-grow overflow-y-auto">
                 <div class="flex justify-between items-start mb-4">
                     <div>
@@ -559,6 +633,7 @@
         </div>
     </div>
 
+    <!-- ORDER DETAIL MODAL FOR ADMIN -->
     <div id="order-detail-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-2xl max-w-4xl w-full p-5 md:p-8 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-4">
@@ -594,6 +669,7 @@
         </div>
     </div>
 
+    <!-- ADMIN PROOF IMAGE VIEW MODAL -->
     <div id="proof-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex justify-center items-center p-3 hidden">
         <div class="bg-white rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl">
             <div class="flex justify-between items-center border-b-2 border-slate-100 pb-3">
@@ -683,20 +759,62 @@
         db.ref('jastip_audit').on('value', s => { auditLogs = s.val() || []; checkDbLoaded(); }, errHandler);
         db.ref('jastip_bank').on('value', s => { bankDatabase = s.val() || { 'ZS': { bankName: '', accNumber: '', accName: '' }, 'SHI': { bankName: '', accNumber: '', accName: '' } }; checkDbLoaded(); }, errHandler);
         
-        // Memuat Waktu Mulai & Waktu Akhir dari Firebase
+        // Memuat Waktu Mulai & Waktu Akhir dari Firebase beserta Update Logo Dynamic
         db.ref('jastip_settings').on('value', s => { 
-            const data = s.val();
-            if (data) {
-                warStartTimeGlobal = data.war_start_time || 0;
-                warEndTimeGlobal = data.war_end_time || 0;
-            } else {
-                warStartTimeGlobal = 0;
-                warEndTimeGlobal = 0;
-            }
+            const data = s.val() || {};
+            
+            warStartTimeGlobal = data.war_start_time || 0;
+            warEndTimeGlobal = data.war_end_time || 0;
+            
+            // Render Update Gambar Logo
+            const defaultZS = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23cbd5e1'/><text x='50' y='50' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='30' fill='%23fff'>ZS</text></svg>";
+            const defaultSHI = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23cbd5e1'/><text x='50' y='50' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='30' fill='%23fff'>SHI</text></svg>";
+            
+            const logoZS = data.logo_zs || defaultZS;
+            const logoSHI = data.logo_shi || defaultSHI;
+            
+            document.getElementById('loading-logo-zs').src = logoZS;
+            document.getElementById('loading-logo-shi').src = logoSHI;
+            document.getElementById('nav-logo-zs').src = logoZS;
+            document.getElementById('nav-logo-shi').src = logoSHI;
+            document.getElementById('login-logo-zs').src = logoZS;
+            document.getElementById('login-logo-shi').src = logoSHI;
+            
             checkDbLoaded(); 
         }, errHandler);
         
         db.ref('jastip_photos').on('value', s => { photoDatabase = s.val() || {}; checkDbLoaded(); }, errHandler);
+
+        // --- FUNGSI SAVE LOGO DARI SUPERADMIN ---
+        function saveBrandLogo(brand) {
+            const fileInput = document.getElementById(`uploadLogo${brand}`);
+            if (!fileInput.files.length) return showToast(`Pilih gambar untuk logo ${brand}!`, true);
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    // Ukuran logo lebih kecil agar loading cepat
+                    if (w > 200) { h *= 200 / w; w = 200; } 
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const base64Image = canvas.toDataURL('image/png', 0.8);
+                    
+                    db.ref(`jastip_settings/logo_${brand.toLowerCase()}`).set(base64Image).then(() => {
+                        logAdminActivity("Upload Logo", `Memperbarui Logo utama untuk brand ${brand}.`);
+                        showToast(`Logo ${brand} berhasil disimpan!`);
+                        fileInput.value = "";
+                    }).catch(err => {
+                        showToast("Gagal menyimpan logo: " + err.message, true);
+                    });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
         // --- FUNGSI SET DAN STOP TIMER WAR ---
         function setWarTimer() {
@@ -748,7 +866,6 @@
             });
         }
 
-        // --- FUNGSI BERSIHKAN AUDIT LOG ---
         function clearAuditLog() {
             if(!confirm("⚠️ PERINGATAN! Anda yakin ingin menghapus SELURUH catatan log riwayat aktivitas? Tindakan ini tidak dapat dibatalkan!")) return;
             
@@ -1005,9 +1122,20 @@
         function loginSuccess(user, isAdmin) {
             currentUser = user;
             localStorage.setItem('jastip_currentUser', user);
-            document.getElementById('username').value = ""; document.getElementById('password').value = "";
-            document.getElementById('reg-phone').value = ""; document.getElementById('reg-address').value = "";
-            showApp(isAdmin);
+            document.getElementById('username').value = ""; 
+            document.getElementById('password').value = "";
+            document.getElementById('reg-phone').value = ""; 
+            document.getElementById('reg-address').value = "";
+            
+            // Munculkan layar loading logo
+            document.getElementById('loading-overlay').style.display = 'flex';
+            document.getElementById('auth-view').classList.add('hidden'); 
+
+            // Simulasi proses loading (2 detik) sebelum masuk ke dashboard
+            setTimeout(() => {
+                document.getElementById('loading-overlay').style.display = 'none';
+                showApp(isAdmin);
+            }, 2000);
         }
 
         function logout() {
@@ -2159,7 +2287,7 @@
 
         function submitOrder() {
             if (!selectedVariantForOrder) return;
-            if (isAddingToCart) return; // Mencegah double klik
+            if (isAddingToCart) return; 
             isAddingToCart = true;
             
             const qtyInput = document.getElementById('modal-qty-input');
@@ -2170,7 +2298,6 @@
                 return showToast("Jumlah tidak valid!", true);
             }
 
-            // INSTANT FEEDBACK: Ubah tombol jadi loading
             const btn = document.getElementById('btnOrderSubmit');
             const originalBtnText = btn.innerText;
             btn.innerText = "⏳ SEDANG MENGAMANKAN TARGET...";
@@ -2184,7 +2311,7 @@
                 const targetIndex = cInv.findIndex(item => item.id === selectedVariantForOrder.id);
                 if (targetIndex < 0 || cInv[targetIndex].stock < requestedQty) {
                     isAddingToCart = false;
-                    btn.innerText = originalBtnText; // Kembalikan tombol
+                    btn.innerText = originalBtnText; 
                     btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                     showToast("💥 GAGAL! Target ini baru saja direbut jastiper lain di arena!", true);
                     closeModal();
@@ -2210,10 +2337,9 @@
 
                 cOrd.push(itemOrder);
 
-                // TIDAK MENYIMPAN INVENTORY KARENA TIDAK ADA PERUBAHAN STOK
                 db.ref('jastip_orders').set(cOrd).then(() => {
                     isAddingToCart = false;
-                    btn.innerText = originalBtnText; // Kembalikan tombol
+                    btn.innerText = originalBtnText; 
                     btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                     showToast(`🚀 BERHASIL! ${requestedQty} PCS dimasukkan ke keranjang sementara!`);
                     closeModal();
@@ -2247,7 +2373,6 @@
 
                 const item = cInv[iIndex];
                 
-                // Hanya memvalidasi ketersediaan stok, JANGAN dikurangi
                 if(item.stock < newQty) {
                     return showToast(`Gagal! Sisa stok target tersebut di arena hanya: ${item.stock} Pcs`, true);
                 }
@@ -2268,7 +2393,10 @@
         }
 
         function deleteCartItem(orderId) {
-            if(!confirm("Yakin hapus target ini dari keranjang?")) return;
+            if(!confirm("Yakin hapus target ini dari keranjang? (Stok akan dikembalikan ke arena WAR)")) return;
+            
+            showToast("⏳ Sedang membuang target dari keranjang...");
+
             db.ref('/').once('value').then(s => {
                 let data = s.val() || {};
                 let cOrd = data.jastip_orders || [];
@@ -2276,10 +2404,12 @@
                 const oIndex = cOrd.findIndex(o => o.id === orderId);
                 if (oIndex > -1) {
                     cOrd.splice(oIndex, 1); 
-                    // JANGAN menambahkan stok kembali karena tidak pernah dipotong
-                    db.ref('jastip_orders').set(cOrd);
-                    showToast("Target dilepaskan dari keranjang!");
+                    db.ref('jastip_orders').set(cOrd).then(() => {
+                        showToast("Target dilepaskan dari keranjang!");
+                    });
                 }
+            }).catch(e => {
+                showToast("Gagal membuang target. Coba lagi.", true);
             });
         }
 
@@ -2448,12 +2578,14 @@
             });
         }
 
-        // --- UPDATE PENTING: CHECKOUT RACE CONDITION (STOK BARU DIPOTONG DISINI) ---
         function processSelesaiCheckout() {
-            if (isProcessingCheckout) return; // Mencegah double klik
+            if (isProcessingCheckout) return; 
             isProcessingCheckout = true;
             
-            showToast("⏳ Sedang memproses dan mengunci pesanan Anda...");
+            const btn = document.getElementById('btnProcessCheckout');
+            const originalBtnText = btn.innerHTML;
+            btn.innerText = "⏳ SEDANG MEMPROSES & MENGUNCI...";
+            btn.classList.add('opacity-70', 'cursor-wait', 'animate-pulse');
 
             db.ref('/').once('value').then(s => {
                 let data = s.val() || {};
@@ -2464,6 +2596,8 @@
                 
                 if(activeCart.length === 0) {
                     isProcessingCheckout = false;
+                    btn.innerHTML = originalBtnText;
+                    btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                     return showToast("Keranjang kosong!", true);
                 }
 
@@ -2474,13 +2608,11 @@
                 const limitTenMinutes = Date.now() + 10 * 60 * 1000;
                 const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
 
-                // Validasi dan pemotongan stok dilakukan disini
                 activeCart.forEach(cartItem => {
                     const invIndex = cInv.findIndex(i => i.sku === cartItem.sku);
                     
-                    // Jika stok di inventory masih cukup
                     if (invIndex > -1 && cInv[invIndex].stock >= cartItem.qty) {
-                        cInv[invIndex].stock -= cartItem.qty; // Potong stok aktual!
+                        cInv[invIndex].stock -= cartItem.qty; 
                         
                         cartItem.status = 'Pending';
                         cartItem.expiryTime = limitTenMinutes;
@@ -2489,14 +2621,11 @@
                         
                         newCOrd.push(cartItem);
                     } else {
-                        // Jika stok kurang (kalah cepat)
                         checkoutSuccess = false;
                         failedItems.push(cartItem.product);
-                        // Item tidak dimasukkan ke 'newCOrd', sehingga akan hilang dari keranjang
                     }
                 });
 
-                // Membangun ulang data pesanan keseluruhan
                 let finalOrd = cOrd.filter(o => !(o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart'));
                 finalOrd = finalOrd.concat(newCOrd);
 
@@ -2504,6 +2633,8 @@
                     db.ref('jastip_inventory').set(cInv);
                     db.ref('jastip_orders').set(finalOrd).then(() => {
                         isProcessingCheckout = false;
+                        btn.innerHTML = originalBtnText;
+                        btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                         showToast(`⚠️ GAGAL! Anda kalah cepat. Target berikut sudah habis direbut jastiper lain: ${failedItems.join(', ')}`, true);
                         renderAllViews();
                     });
@@ -2511,11 +2642,15 @@
                     db.ref('jastip_inventory').set(cInv);
                     db.ref('jastip_orders').set(finalOrd).then(() => {
                         isProcessingCheckout = false;
+                        btn.innerHTML = originalBtnText;
+                        btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                         showToast("🔥 Target Terkunci! Segera lakukan pembayaran.");
                     });
                 }
             }).catch(e => {
                 isProcessingCheckout = false;
+                btn.innerHTML = originalBtnText;
+                btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                 showToast("Terjadi kesalahan jaringan", true);
             });
         }
