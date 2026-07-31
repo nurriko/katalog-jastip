@@ -2675,46 +2675,52 @@
                 let cInv = data.jastip_inventory || [];
                 let cOrd = data.jastip_orders || [];
                 
-                const activeCart = cOrd.filter(o => o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart');
+                let newCOrd = [];
+                let failedItems = [];
+                let hasActiveCart = false;
                 
-                if(activeCart.length === 0) {
+                const limitTenMinutes = Date.now() + 10 * 60 * 1000;
+                const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
+
+                // Proses satu-satu semua antrean yang ada di database
+                cOrd.forEach(order => {
+                    // Cek jika pesanan ini milik user & statusnya Cart
+                    if (order.username && currentUser && order.username.toLowerCase() === currentUser.toLowerCase() && order.status === 'Cart') {
+                        hasActiveCart = true;
+                        const invIndex = cInv.findIndex(i => i.sku === order.sku);
+                        
+                        // Validasi ketersediaan stok
+                        if (invIndex > -1 && cInv[invIndex].stock >= order.qty) {
+                            cInv[invIndex].stock -= order.qty; // Potong stok
+                            
+                            // Amankan & Kunci Pesanan
+                            order.status = 'Pending';
+                            order.expiryTime = limitTenMinutes;
+                            order.date = unifiedCheckoutTime;
+                            order.cartExpiryTime = null;
+                            
+                            newCOrd.push(order);
+                        } else {
+                            // Stok gagal didapat (hangus)
+                            failedItems.push(order.product);
+                        }
+                    } else {
+                        // Masukkan kembali pesanan milik orang lain & status lain
+                        newCOrd.push(order);
+                    }
+                });
+
+                if (!hasActiveCart) {
                     isProcessingCheckout = false;
                     btn.innerHTML = originalBtnText;
                     btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
                     return showToast("Keranjang kosong!", true);
                 }
 
-                let checkoutSuccess = true;
-                let failedItems = [];
-                let newCOrd = [];
-                
-                const limitTenMinutes = Date.now() + 10 * 60 * 1000;
-                const unifiedCheckoutTime = new Date().toLocaleString('id-ID'); 
-
-                activeCart.forEach(cartItem => {
-                    const invIndex = cInv.findIndex(i => i.sku === cartItem.sku);
-                    
-                    if (invIndex > -1 && cInv[invIndex].stock >= cartItem.qty) {
-                        cInv[invIndex].stock -= cartItem.qty; 
-                        
-                        cartItem.status = 'Pending';
-                        cartItem.expiryTime = limitTenMinutes;
-                        cartItem.date = unifiedCheckoutTime;
-                        cartItem.cartExpiryTime = null;
-                        
-                        newCOrd.push(cartItem);
-                    } else {
-                        checkoutSuccess = false;
-                        failedItems.push(cartItem.product);
-                    }
-                });
-
-                let finalOrd = cOrd.filter(o => !(o.username && currentUser && o.username.toLowerCase() === currentUser.toLowerCase() && o.status === 'Cart'));
-                finalOrd = finalOrd.concat(newCOrd);
-
+                // Simpan update ke Firebase
                 if (failedItems.length > 0) {
                     db.ref('jastip_inventory').set(cInv);
-                    db.ref('jastip_orders').set(finalOrd).then(() => {
+                    db.ref('jastip_orders').set(newCOrd).then(() => {
                         isProcessingCheckout = false;
                         btn.innerHTML = originalBtnText;
                         btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
@@ -2723,7 +2729,7 @@
                     });
                 } else {
                     db.ref('jastip_inventory').set(cInv);
-                    db.ref('jastip_orders').set(finalOrd).then(() => {
+                    db.ref('jastip_orders').set(newCOrd).then(() => {
                         isProcessingCheckout = false;
                         btn.innerHTML = originalBtnText;
                         btn.classList.remove('opacity-70', 'cursor-wait', 'animate-pulse');
