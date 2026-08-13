@@ -171,6 +171,22 @@
 
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
 
+                    <!-- FITUR KUNCI APLIKASI -->
+                    <div class="card p-4 md:p-5 border-t-4 border-rose-600 bg-gradient-to-br from-white to-rose-50/30">
+                        <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-rose-900">🔒 Sistem Keamanan: Kunci Aplikasi</h3>
+                        <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Saat dikunci, seluruh Jastiper akan otomatis ter-logout dan tidak bisa login. Hanya Superadmin dan Akun Pengecualian (Whitelist) yang bisa masuk.</p>
+                        
+                        <div class="flex flex-col md:flex-row gap-3 items-end">
+                            <div class="w-full">
+                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-1">Pengecualian User (Pisahkan dengan koma)</label>
+                                <input type="text" id="whitelistedUsersInput" placeholder="Contoh: jastip_sultan, jastiper_vip" class="input-field font-black text-rose-900 bg-white border-rose-300 focus:border-rose-500">
+                            </div>
+                            <button onclick="toggleAppLock(true)" class="w-full md:w-auto bg-rose-600 hover:bg-rose-700 text-white font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🔒 KUNCI APP</button>
+                            <button onclick="toggleAppLock(false)" class="w-full md:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🔓 BUKA APP</button>
+                        </div>
+                        <p id="lockStatusText" class="text-xs font-black text-center mt-3"></p>
+                    </div>
+
                     <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-br from-white to-amber-50/30">
                         <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-amber-900">⏳ Pengaturan Jadwal WAR (Akses Login & Banner)</h3>
                         <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Saat dijadwalkan, Jastiper <strong>tidak akan bisa login</strong> sebelum "Waktu Mulai" tiba.</p>
@@ -701,6 +717,8 @@
         
         let warStartTimeGlobal = 0;
         let warEndTimeGlobal = 0; 
+        let isAppLockedGlobal = false;
+        let whitelistedUsersGlobal = [];
         
         // VARIABEL ANTI DOUBLE CLICK
         let isProcessingCheckout = false;
@@ -758,6 +776,33 @@
             warStartTimeGlobal = data.war_start_time || 0;
             warEndTimeGlobal = data.war_end_time || 0;
             
+            isAppLockedGlobal = data.is_app_locked || false;
+            const whitelistStr = data.whitelisted_users || "";
+            whitelistedUsersGlobal = whitelistStr.split(',').map(u => u.trim().toLowerCase()).filter(u => u);
+
+            // Update UI Admin jika Superadmin sedang membuka halaman pengaturan
+            if (document.getElementById('whitelistedUsersInput')) {
+                document.getElementById('whitelistedUsersInput').value = whitelistStr;
+                const lockStatusEl = document.getElementById('lockStatusText');
+                if (isAppLockedGlobal) {
+                    lockStatusEl.innerText = "STATUS: 🔴 APLIKASI TERKUNCI";
+                    lockStatusEl.className = "text-xs font-black text-center mt-3 text-rose-600 animate-pulse";
+                } else {
+                    lockStatusEl.innerText = "STATUS: 🟢 APLIKASI TERBUKA";
+                    lockStatusEl.className = "text-xs font-black text-center mt-3 text-emerald-600";
+                }
+            }
+
+            // Auto-Kick (Otomatis Logout) Jastiper yang sedang online jika aplikasi tiba-tiba dikunci
+            if (currentUser) {
+                const isAdmin = Object.keys(superAdmins).map(k => k.toLowerCase()).includes(currentUser.toLowerCase());
+                const isWhitelisted = whitelistedUsersGlobal.includes(currentUser.toLowerCase());
+                if (isAppLockedGlobal && !isAdmin && !isWhitelisted) {
+                    logout();
+                    showToast("Sistem sedang dikunci oleh Superadmin. Anda telah dikeluarkan.", true);
+                }
+            }
+
             // Render Update Gambar Logo
             const defaultZS = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23cbd5e1'/><text x='50' y='50' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='30' fill='%23fff'>ZS</text></svg>";
             const defaultSHI = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23cbd5e1'/><text x='50' y='50' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='30' fill='%23fff'>SHI</text></svg>";
@@ -918,6 +963,19 @@
                 showToast("Jadwal WAR dibatalkan!");
                 document.getElementById('warStartTimeInput').value = '';
                 document.getElementById('warEndTimeInput').value = '';
+            });
+        }
+
+        function toggleAppLock(isLocking) {
+            const whitelist = document.getElementById('whitelistedUsersInput').value;
+            db.ref('jastip_settings').update({
+                is_app_locked: isLocking,
+                whitelisted_users: whitelist
+            }).then(() => {
+                logAdminActivity(isLocking ? "Mengunci Aplikasi" : "Membuka Kunci Aplikasi", `Status: ${isLocking ? 'Terkunci' : 'Terbuka'}. Whitelist: ${whitelist || 'Tidak ada'}`);
+                showToast(isLocking ? "Aplikasi berhasil dikunci dari Jastiper!" : "Kunci aplikasi dibuka!");
+            }).catch(err => {
+                showToast("Terjadi kesalahan jaringan", true);
             });
         }
 
@@ -1156,6 +1214,11 @@
                 
                 if (!isAdmin && warStartTimeGlobal > Date.now()) {
                     return showToast("Pintu arena belum dibuka! Silakan tunggu waktu hitung mundur selesai.", true);
+                }
+                
+                const isWhitelisted = whitelistedUsersGlobal.includes(uLower);
+                if (isAppLockedGlobal && !isAdmin && !isWhitelisted) {
+                    return showToast("Aplikasi sedang dikunci oleh Superadmin! Akses masuk ditolak.", true);
                 }
                 
                 const adminKey = Object.keys(superAdmins).find(k => k.toLowerCase() === uLower);
