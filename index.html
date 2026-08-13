@@ -171,22 +171,6 @@
 
                 <div id="admin-tab-inventory" class="space-y-4 md:space-y-6">
 
-                    <!-- FITUR KUNCI APLIKASI -->
-                    <div class="card p-4 md:p-5 border-t-4 border-rose-600 bg-gradient-to-br from-white to-rose-50/30">
-                        <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-rose-900">🔒 Sistem Keamanan: Kunci Aplikasi</h3>
-                        <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Saat dikunci, seluruh Jastiper akan otomatis ter-logout dan tidak bisa login. Hanya Superadmin dan Akun Pengecualian (Whitelist) yang bisa masuk.</p>
-                        
-                        <div class="flex flex-col md:flex-row gap-3 items-end">
-                            <div class="w-full">
-                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-1">Pengecualian User (Pisahkan dengan koma)</label>
-                                <input type="text" id="whitelistedUsersInput" placeholder="Contoh: jastip_sultan, jastiper_vip" class="input-field font-black text-rose-900 bg-white border-rose-300 focus:border-rose-500">
-                            </div>
-                            <button onclick="toggleAppLock(true)" class="w-full md:w-auto bg-rose-600 hover:bg-rose-700 text-white font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🔒 KUNCI APP</button>
-                            <button onclick="toggleAppLock(false)" class="w-full md:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest shadow-md transition whitespace-nowrap">🔓 BUKA APP</button>
-                        </div>
-                        <p id="lockStatusText" class="text-xs font-black text-center mt-3"></p>
-                    </div>
-
                     <div class="card p-4 md:p-5 border-t-4 border-amber-500 bg-gradient-to-br from-white to-amber-50/30">
                         <h3 class="font-black text-sm uppercase mb-3 flex items-center gap-2 tracking-wide text-amber-900">⏳ Pengaturan Jadwal WAR (Akses Login & Banner)</h3>
                         <p class="text-[10px] md:text-[11px] text-slate-500 mb-4 font-bold">Saat dijadwalkan, Jastiper <strong>tidak akan bisa login</strong> sebelum "Waktu Mulai" tiba.</p>
@@ -402,22 +386,50 @@
                     </div>
                 </div>
 
-                <div id="admin-tab-users" class="hidden card p-4 md:p-5 space-y-4 border-t-4 border-slate-400 shadow-sm">
-                    <h3 class="font-black text-sm uppercase tracking-wide">👥 Daftar Akun Jastiper</h3>
-                    <div class="table-container border border-slate-200 bg-white">
-                        <table>
-                            <thead>
-                                <tr class="text-[10px] md:text-[11px] bg-slate-100 tracking-wide">
-                                    <th class="text-center">No</th>
-                                    <th>Username</th>
-                                    <th>No. Telp / WA</th>
-                                    <th>Alamat Kirim</th>
-                                    <th class="text-center">Status Akun</th>
-                                    <th class="text-center">Aksi Manajemen</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminUsersBody"></tbody>
-                        </table>
+                <div id="admin-tab-users" class="hidden space-y-4 md:space-y-6">
+                    <!-- PANEL KUNCI APLIKASI (LOCKDOWN) -->
+                    <div class="card p-4 md:p-6 border-t-8 border-rose-600 bg-gradient-to-br from-white to-rose-50/40 shadow-md relative overflow-hidden">
+                        <!-- Ikon Gembok Raksasa Transparan di Background -->
+                        <div class="absolute -right-6 -top-6 opacity-[0.07] text-[150px] pointer-events-none transform rotate-12">🔒</div>
+                        
+                        <h3 class="font-black text-sm md:text-base uppercase mb-2 flex items-center gap-2 tracking-wide text-rose-900 relative z-10">🔒 Sistem Keamanan Akses Web</h3>
+                        <p class="text-[10px] md:text-[11px] text-slate-600 mb-5 font-bold relative z-10 max-w-2xl leading-relaxed">Saat dikunci, seluruh Jastiper akan otomatis ter-logout dan dilarang masuk. Hanya Superadmin dan <strong>Akun Pengecualian (Whitelist)</strong> yang bisa mengakses arena WAR.</p>
+                        
+                        <div class="flex flex-col md:flex-row gap-3 items-end relative z-10">
+                            <div class="w-full">
+                                <label class="text-[10px] md:text-[11px] font-black text-slate-700 uppercase tracking-widest block mb-1">Pengecualian User (Pisahkan dengan koma)</label>
+                                <input type="text" id="whitelistedUsersInput" placeholder="Contoh: jastip_sultan, jastiper_vip" class="input-field font-black text-rose-900 bg-white border-rose-300 focus:border-rose-500 shadow-inner">
+                            </div>
+                            <button onclick="toggleAppLock(true)" class="w-full md:w-auto bg-rose-600 hover:bg-rose-700 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest shadow-[0_4px_15px_-3px_rgba(225,29,72,0.5)] transition whitespace-nowrap">🔒 KUNCI WEB</button>
+                            <button onclick="toggleAppLock(false)" class="w-full md:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest shadow-[0_4px_15px_-3px_rgba(16,185,129,0.5)] transition whitespace-nowrap">🔓 BUKA WEB</button>
+                        </div>
+                        
+                        <div class="mt-5 pt-4 border-t border-rose-200 relative z-10">
+                            <div id="lockStatusText" class="text-xs font-black flex items-center gap-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- TABEL DAFTAR JASTIPER -->
+                    <div class="card p-4 md:p-5 border-t-4 border-slate-400 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-black text-sm uppercase tracking-wide">👥 Daftar Akun Jastiper</h3>
+                            <span class="text-[10px] font-black bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg shadow-inner tracking-widest uppercase">Total: <span id="totalJastiperCount" class="text-indigo-600 text-xs">0</span> Akun</span>
+                        </div>
+                        <div class="table-container border border-slate-200 bg-white">
+                            <table>
+                                <thead>
+                                    <tr class="text-[10px] md:text-[11px] bg-slate-100 tracking-wide">
+                                        <th class="text-center">No</th>
+                                        <th>Username</th>
+                                        <th>No. Telp / WA</th>
+                                        <th>Alamat Kirim</th>
+                                        <th class="text-center">Status Akun</th>
+                                        <th class="text-center">Aksi Manajemen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminUsersBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -785,11 +797,9 @@
                 document.getElementById('whitelistedUsersInput').value = whitelistStr;
                 const lockStatusEl = document.getElementById('lockStatusText');
                 if (isAppLockedGlobal) {
-                    lockStatusEl.innerText = "STATUS: 🔴 APLIKASI TERKUNCI";
-                    lockStatusEl.className = "text-xs font-black text-center mt-3 text-rose-600 animate-pulse";
+                    lockStatusEl.innerHTML = `<span class="bg-rose-100 text-rose-800 px-2 py-1 rounded shadow-sm border border-rose-200 uppercase tracking-widest text-[9px]">STATUS:</span> <span class="text-rose-600 animate-pulse text-xs">🔴 APLIKASI TERKUNCI DARI JASTIPER</span>`;
                 } else {
-                    lockStatusEl.innerText = "STATUS: 🟢 APLIKASI TERBUKA";
-                    lockStatusEl.className = "text-xs font-black text-center mt-3 text-emerald-600";
+                    lockStatusEl.innerHTML = `<span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded shadow-sm border border-emerald-200 uppercase tracking-widest text-[9px]">STATUS:</span> <span class="text-emerald-600 text-xs">🟢 APLIKASI TERBUKA (PUBLIK)</span>`;
                 }
             }
 
@@ -1872,6 +1882,9 @@
         }
 
         function renderAdminUsers() {
+            const countEl = document.getElementById('totalJastiperCount');
+            if (countEl) countEl.innerText = userAccounts.length;
+
             const body = document.getElementById('adminUsersBody');
             body.innerHTML = userAccounts.map((u, i) => `
                 <tr class="text-[10px] md:text-xs hover:bg-slate-50 border-b border-slate-100">
